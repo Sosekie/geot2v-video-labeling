@@ -1,0 +1,1180 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>生成视频标注台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a clip-index rail on the left, the viewer and the label sheet on the right; on phones the rail becomes a scrolling strip above the viewer. */
+:root{
+  --bg:#F2F4F1; --panel:#FFFFFF; --ink:#16201B; --muted:#56635C; --line:#D6DDD8;
+  --accent:#0A7560; --accent-ink:#FFFFFF; --accent-soft:#DBEEE8;
+  --warn:#8F5B00; --warn-soft:#FAEFD8; --danger:#B42318; --danger-soft:#FBE4E1;
+  --chip:#E6EBE7; --screen:#0B0E0D;
+  --font-body: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius: 8px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1311; --panel:#161C19; --ink:#E2EAE5; --muted:#98A69E; --line:#29332E;
+    --accent:#3DC6A4; --accent-ink:#04241C; --accent-soft:#143A30;
+    --warn:#E6AA42; --warn-soft:#382A10; --danger:#F2776C; --danger-soft:#3A1B18;
+    --chip:#1F2723; --screen:#050706; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1311; --panel:#161C19; --ink:#E2EAE5; --muted:#98A69E; --line:#29332E;
+  --accent:#3DC6A4; --accent-ink:#04241C; --accent-soft:#143A30;
+  --warn:#E6AA42; --warn-soft:#382A10; --danger:#F2776C; --danger-soft:#3A1B18;
+  --chip:#1F2723; --screen:#050706; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.55}
+.wrap{max-width:1360px;margin:0 auto;padding-inline:16px;padding-block:14px 28px;display:grid;gap:12px}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Header */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;border-bottom:1px solid var(--line)}
+.brand{display:grid;gap:0;min-width:0}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+h1{font-family:var(--font-display);font-weight:600;font-size:26px;line-height:1.1;margin:0;letter-spacing:.01em;text-wrap:balance}
+.meter{display:grid;gap:4px;min-width:180px;flex:1 1 220px;max-width:360px}
+.meter-text{font-variant-numeric:tabular-nums;color:var(--muted)}
+.meter-text b{color:var(--ink);font-family:var(--font-mono)}
+.bar{height:6px;border-radius:3px;background:var(--chip);overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .25s ease}
+.rater{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.rater input{width:9em;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:4px 8px}
+.status{font-size:13px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);max-width:100%}
+.status[data-state="ok"]{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.status[data-state="local"]{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.status[data-state="error"]{color:var(--danger);border-color:var(--danger);background:var(--danger-soft)}
+
+/* Guide */
+.guide{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding-inline:14px;padding-block:8px}
+.guide summary{cursor:pointer;font-weight:600}
+.guide ul{margin:8px 0 4px;padding-left:20px;display:grid;gap:4px;max-width:78ch}
+kbd{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--chip)}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:232px minmax(0,1fr);gap:16px;align-items:start}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 72px);display:grid;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px}
+.rail-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer}
+.chips{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;max-height:min(70vh,640px);overflow:auto;padding:2px}
+.chip{font-family:var(--font-mono);font-size:12px;font-variant-numeric:tabular-nums;padding:5px 0;border-radius:5px;border:1px solid var(--line);background:transparent;cursor:pointer;color:var(--muted)}
+.chip.done{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.chip.current{outline:2px solid var(--ink);outline-offset:1px;color:var(--ink)}
+.chip[hidden]{display:none}
+
+.stage{display:grid;gap:14px;min-width:0}
+.viewer{display:grid;gap:8px;min-width:0}
+.viewer-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+.vid{font-family:var(--font-display);font-size:30px;font-weight:600;line-height:1}
+.family{font-size:13px;padding:2px 8px;border-radius:4px;background:var(--chip);color:var(--muted)}
+.pos{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-left:auto}
+.video-box{background:var(--screen);border-radius:var(--radius);overflow:hidden;aspect-ratio:16/9;max-width:100%;display:grid;place-items:center}
+.video-box video{width:100%;height:100%;object-fit:contain;display:block}
+.video-tools{display:flex;flex-wrap:wrap;gap:6px}
+.video-tools button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px}
+.video-tools button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.prompt{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;display:grid;gap:4px;min-width:0}
+.prompt .label{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.prompt p{margin:0;max-height:7.6em;overflow:auto;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+
+/* Label sheet */
+.sheet{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grp{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:10px 12px 12px;margin:0;min-width:0;display:grid;gap:4px;align-content:start}
+.col{display:grid;gap:12px;align-content:start;min-width:0}
+.grp.wide{grid-column:1 / -1}
+.grp.missing{border-color:var(--danger);background:var(--danger-soft)}
+legend{font-weight:600;padding:0 4px;display:flex;align-items:baseline;gap:8px}
+legend em{font-style:normal;font-weight:400;font-size:12px;color:var(--muted)}
+.code{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:600}
+.opt{display:grid;grid-template-columns:auto 2.6em minmax(0,1fr);align-items:start;gap:6px;padding:4px 6px;border-radius:6px;cursor:pointer}
+.opt:hover{background:var(--chip)}
+.opt input{margin:3px 0 0}
+.opt .oc{font-family:var(--font-mono);font-size:12px;color:var(--muted);padding-top:1px}
+.opt:has(input:checked){background:var(--accent-soft)}
+.opt:has(input:checked) .oc{color:var(--accent);font-weight:600}
+.note{display:grid;gap:6px}
+.note label{font-weight:600}
+textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:8px;resize:vertical;min-height:3.2em}
+.actions{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;position:sticky;bottom:0;background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+.actions .spacer{flex:1 1 auto;min-width:0}
+.msg{font-size:13px;color:var(--muted);min-width:0}
+.msg.err{color:var(--danger)}
+.msg.ok{color:var(--accent)}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:8px 14px;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn:disabled{opacity:.5;cursor:default}
+
+.foot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:12px}
+.foot textarea{font-family:var(--font-mono);font-size:11px;min-height:6em}
+
+@media (max-width: 860px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static}
+  .chips{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:3.6em;overflow-x:auto;max-height:none;padding-bottom:6px}
+  .sheet{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion: reduce){ .bar span{transition:none} }
+html,body{margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="eyebrow">GeoT2V · O31 标注试点</span>
+      <h1>生成视频标注台</h1>
+    </div>
+    <div class="meter" aria-live="polite">
+      <div class="meter-text">已标 <b id="doneCount">0</b> / <span id="totalCount">78</span> 段</div>
+      <div class="bar"><span id="barFill"></span></div>
+    </div>
+    <label class="rater" for="rater">评分人 <input id="rater" type="text" placeholder="你的名字或缩写" autocomplete="name"></label>
+    <div class="status" id="status" data-state="pending">正在检查保存方式…</div>
+  </header>
+
+  <details class="guide" id="guide" open>
+    <summary>标注说明</summary>
+    <ul>
+      <li>每段视频下面有五组选项。<b>A 镜头运动</b>和 <b>D 总体判断</b>必选；其余按看到的勾选，没有就不勾。</li>
+      <li>判断镜头有没有真的移动，看近处和远处：真的在走动时，近处的东西比远处移动得快，前后遮挡关系会变化；原地转动或变焦时，整幅画面像一张图在平移或放大，前后关系不变。</li>
+      <li>拿不准就选“说不准”，比硬选一个更有用。</li>
+      <li>视频已随机打乱，页面上不显示模型名。标完的段可以随时回去修改，以最后一次保存为准。</li>
+      <li>快捷键：<kbd>←</kbd> <kbd>→</kbd> 切换视频；<kbd>Ctrl</kbd>+<kbd>Enter</kbd>（Mac 用 <kbd>⌘</kbd>+<kbd>Enter</kbd>）保存并进入下一段。</li>
+    </ul>
+  </details>
+
+  <div class="layout">
+    <aside class="rail" aria-label="视频列表">
+      <div class="rail-head">
+        <span>视频列表</span>
+        <label class="toggle"><input type="checkbox" id="onlyTodo"> 只看未标</label>
+      </div>
+      <div class="chips" id="chips"></div>
+    </aside>
+
+    <main class="stage">
+      <section class="viewer" aria-label="当前视频">
+        <div class="viewer-head">
+          <span class="vid" id="vidLabel">v001</span>
+          <span class="family" id="family">运镜提示：—</span>
+          <span class="pos" id="pos">1 / 78</span>
+        </div>
+        <div class="video-box">
+          <video id="player" muted loop playsinline autoplay controls preload="auto"></video>
+        </div>
+        <div class="video-tools" id="tools">
+          <button type="button" data-rate="0.5">0.5× 慢放</button>
+          <button type="button" data-rate="1" class="on">1× 原速</button>
+          <button type="button" id="replay">从头播放</button>
+        </div>
+        <div class="prompt">
+          <span class="label">提示词</span>
+          <p id="prompt"></p>
+        </div>
+      </section>
+
+      <form class="sheet" id="sheet" novalidate>
+        <div id="groups" style="display:contents"></div>
+        <div class="grp wide note">
+          <label for="note">备注（可选）</label>
+          <textarea id="note" rows="2" placeholder="例如：第 3 秒左右桌子腿变成了三条"></textarea>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn" id="prev">上一段</button>
+          <span class="msg" id="msg"></span>
+          <span class="spacer"></span>
+          <button type="button" class="btn" id="skip">下一段</button>
+          <button type="submit" class="btn primary" id="save">保存并下一段</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <footer class="foot">
+    <span id="footNote">结果保存在你的浏览器里。全部标完后，点右边的按钮复制结果，把复制的内容发给 Chenrui。</span>
+    <button type="button" class="btn" id="copyAll">复制全部结果（JSON）</button>
+    <textarea id="copyBox" hidden readonly aria-label="全部结果"></textarea>
+  </footer>
+</div>
+
+<script type="application/json" id="manifest">
+{
+  "schema_version": "O31-v1",
+  "sampling_seed": 20261004,
+  "videos": [
+    {
+      "id": "v001",
+      "filename": "videos/v001.mp4",
+      "prompt": "The camera swiftly navigates through a dimly lit parking structure, weaving through ground-level lanes bordered by imposing concrete walls and sturdy columns. The scene is eerily still, with parked cars, directional signs, and various fixtures frozen in time, creating a stark contrast to the camera’s dynamic movement. As it executes two precise, sharp turns, the camera captures the texture of the concrete and the subtle play of shadows, enhancing the sense of speed and agility. The atmosphere is tense yet captivating, with the camera’s fluid motion providing a sense of urgency and exploration within the static environment.",
+      "motion_prompt_family": "other",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v002",
+      "filename": "videos/v002.mp4",
+      "prompt": "The video begins with a close-up of the base of a grand, fluted stone column, its intricate grooves and textures highlighted by steady, soft lighting. The camera swiftly tilts upward, maintaining perfect alignment with the column’s vertical lines, revealing the elegant, timeless craftsmanship of the stonework. As the camera ascends, the column’s fluting creates a mesmerizing pattern, leading the viewer’s eye toward the capital. Upon reaching the top, the capital is revealed in all its ornate glory, adorned with classical acanthus leaves and scrolls, set against the backdrop of a stately, immobile room. The entire scene remains serene and unchanging, with the brisk camera movement providing the only sense of motion.",
+      "motion_prompt_family": "tilt",
+      "frame_count": 96,
+      "fps": 24.0,
+      "duration_sec": 4.0
+    },
+    {
+      "id": "v003",
+      "filename": "videos/v003.mp4",
+      "prompt": "A sleek, high-definition lateral sweep across a set of Venetian blinds, each slat meticulously aligned, captures the essence of motion and light. The blinds, illuminated from the left, cast sharp, rhythmic shadows, creating a mesmerizing pattern of light and dark. As the camera glides smoothly from one end to the other, the steady illumination highlights the precision of each slat, emphasizing the aliasing effect. The blinds remain perfectly still, their metallic sheen reflecting the consistent light source, while the camera’s swift, unwavering movement creates a dynamic visual experience, showcasing the interplay of light, shadow, and motion.",
+      "motion_prompt_family": "lateral",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v004",
+      "filename": "videos/v004.mp4",
+      "prompt": "The camera begins its journey with a sweeping motion around a majestic stone gargoyle perched atop an ancient cathedral, its intricate details illuminated by the soft glow of twilight. As the camera spirals inward, the gargoyle’s menacing features, including its sharp fangs and piercing eyes, become more pronounced against the backdrop of the dusky sky. The spiral tightens smoothly, revealing the texture of the weathered stone, capturing every crack and crevice with precision. The background remains a constant, blurred tapestry of gothic architecture, while the exposure and focus remain locked, ensuring the gargoyle’s fierce expression is the focal point. The spiral concludes with a tight profile shot, emphasizing the gargoyle’s formidable presence and the artistry of its creation.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 96,
+      "fps": 24.0,
+      "duration_sec": 4.0
+    },
+    {
+      "id": "v005",
+      "filename": "videos/v005.mp4",
+      "prompt": "The camera races down an endless office hallway, capturing a thrilling high-speed journey. The walls are lined with identical wooden doors, each with polished brass handles, creating a rhythmic pattern. Bright red exit signs hang above every few doors, their glow casting a steady light on the neutral-toned walls. Overhead, fluorescent ceiling fixtures illuminate the path with a consistent, cool white light, casting no shadows. The floor is carpeted in a muted gray, providing a sense of continuity. As the camera zooms forward, the static objects blur slightly at the edges, enhancing the sensation of speed, while maintaining perfect alignment and balance.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v006",
+      "filename": "videos/v006.mp4",
+      "prompt": "The camera glides smoothly through a serene, enclosed garden, where towering hedges form lush, green walls, their leaves and branches perfectly still, creating a sense of tranquility. Stone paths weave intricately beneath the camera’s gentle orbit, revealing a mosaic of cobblestones and pebbles, each step echoing the garden’s timeless elegance. The camera remains low, capturing the rich textures of the hedges, their leaves a vibrant tapestry of greens, while the absence of the horizon enhances the garden’s secluded charm. Sunlight filters softly through the foliage, casting delicate patterns on the paths, as the camera continues its graceful, uninterrupted circle.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v007",
+      "filename": "videos/v007.mp4",
+      "prompt": "A sleek, high-definition lateral sweep across a set of Venetian blinds, each slat meticulously aligned, captures the essence of motion and light. The blinds, illuminated from the left, cast sharp, rhythmic shadows, creating a mesmerizing pattern of light and dark. As the camera glides smoothly from one end to the other, the steady illumination highlights the precision of each slat, emphasizing the aliasing effect. The blinds remain perfectly still, their metallic sheen reflecting the consistent light source, while the camera’s swift, unwavering movement creates a dynamic visual experience, showcasing the interplay of light, shadow, and motion.",
+      "motion_prompt_family": "lateral",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v008",
+      "filename": "videos/v008.mp4",
+      "prompt": "The camera embarks on a dynamic barrel-roll journey through a luminous glass atrium corridor, where sunlight streams through expansive windows, casting intricate patterns on the polished floor. As the camera gracefully rotates 180 degrees, the corridor’s features remain steadfast: sleek planters brimming with verdant foliage, modern benches inviting rest, and sleek directory boards offering guidance. The reflections on the glass walls and floor remain undisturbed, creating a mesmerizing kaleidoscope of light and shadow. The camera’s fluid motion captures the essence of the space, transforming the atrium into a captivating dance of architecture and light.",
+      "motion_prompt_family": "roll",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v009",
+      "filename": "videos/v009.mp4",
+      "prompt": "A luxurious mechanical pocket watch rests open on deep crimson velvet, its intricate details captured in stunning macro. The camera begins its slow, deliberate pan at the ornate crown, highlighting the delicate engravings and polished metal. As the lens glides smoothly across the watch’s surface, the frozen hands and gears are revealed, each component meticulously crafted and gleaming under the soft, focused illumination. The journey continues to the escapement, where the precision of the jewel settings is showcased, their vibrant colors contrasting beautifully with the metallic intricacies. The entire scene exudes timeless elegance, with the velvet’s rich texture enhancing the watch’s exquisite craftsmanship.",
+      "motion_prompt_family": "other",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v010",
+      "filename": "videos/v010.mp4",
+      "prompt": "A sleek, high-definition lateral sweep across a set of Venetian blinds, each slat meticulously aligned, captures the essence of motion and light. The blinds, illuminated from the left, cast sharp, rhythmic shadows, creating a mesmerizing pattern of light and dark. As the camera glides smoothly from one end to the other, the steady illumination highlights the precision of each slat, emphasizing the aliasing effect. The blinds remain perfectly still, their metallic sheen reflecting the consistent light source, while the camera’s swift, unwavering movement creates a dynamic visual experience, showcasing the interplay of light, shadow, and motion.",
+      "motion_prompt_family": "lateral",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v011",
+      "filename": "videos/v011.mp4",
+      "prompt": "The camera swiftly ascends a sleek, modern spiral staircase in a spacious office atrium, capturing the polished metal handrails and glass balusters in sharp detail. As it spirals upward, the lens brushes past minimalist signage, reflecting the building’s contemporary design. The environment remains static and pristine, with the staircase’s geometric precision emphasized by the constant radius of the climb. The atrium’s ambient lighting casts subtle reflections on the surfaces, enhancing the sense of motion. The camera’s ascent is smooth and uninterrupted, offering a dynamic perspective of the architectural elegance and the stillness of the surrounding space.",
+      "motion_prompt_family": "other",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v012",
+      "filename": "videos/v012.mp4",
+      "prompt": "The camera gracefully advances toward an exquisite antique globe perched on an intricately carved wooden stand, its surface illuminated by soft, ambient light. As the frame narrows, the globe’s aged paper grain becomes evident, showcasing faded cartographic details and muted colors that whisper tales of exploration. The brass meridian, polished yet timeworn, gleams subtly, its engraved lines and numbers hinting at a bygone era of navigation. The room is enveloped in a serene stillness, with no hint of wind or vibration, allowing the globe’s historical elegance to captivate the viewer. The camera’s gentle motion is the only dynamic element, drawing the eye closer to the globe’s timeless allure.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    },
+    {
+      "id": "v013",
+      "filename": "videos/v013.mp4",
+      "prompt": "A static outdoor bench captured from multiple viewpoints.",
+      "motion_prompt_family": "other",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v014",
+      "filename": "videos/v014.mp4",
+      "prompt": "The camera glides smoothly through a serene, enclosed garden, where towering hedges form lush, green walls, their leaves and branches perfectly still, creating a sense of tranquility. Stone paths weave intricately beneath the camera’s gentle orbit, revealing a mosaic of cobblestones and pebbles, each step echoing the garden’s timeless elegance. The camera remains low, capturing the rich textures of the hedges, their leaves a vibrant tapestry of greens, while the absence of the horizon enhances the garden’s secluded charm. Sunlight filters softly through the foliage, casting delicate patterns on the paths, as the camera continues its graceful, uninterrupted circle.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v015",
+      "filename": "videos/v015.mp4",
+      "prompt": "The video begins with a swift dolly-in towards an exquisite, vintage pocket watch, its surface adorned with intricate jewels that catch the light. As the camera zooms in, the focus sharpens on the delicate, engraved monogram, revealing the initials \"J.L.\" in elegant script. The watch’s face, a masterpiece of craftsmanship, is frozen in time, its hands paused at precisely 10:10. The exposure remains constant, highlighting the watch’s gleaming metallic finish and the sparkle of its jewels. Suddenly, the camera rapidly pulls back, revealing the full grandeur of the pocket watch, resting on a plush velvet surface, its timeless elegance captured in perfect clarity.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 96,
+      "fps": 24.0,
+      "duration_sec": 4.0
+    },
+    {
+      "id": "v016",
+      "filename": "videos/v016.mp4",
+      "prompt": "A sleek, high-definition lateral sweep across a set of Venetian blinds, each slat meticulously aligned, captures the essence of motion and light. The blinds, illuminated from the left, cast sharp, rhythmic shadows, creating a mesmerizing pattern of light and dark. As the camera glides smoothly from one end to the other, the steady illumination highlights the precision of each slat, emphasizing the aliasing effect. The blinds remain perfectly still, their metallic sheen reflecting the consistent light source, while the camera’s swift, unwavering movement creates a dynamic visual experience, showcasing the interplay of light, shadow, and motion.",
+      "motion_prompt_family": "lateral",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    },
+    {
+      "id": "v017",
+      "filename": "videos/v017.mp4",
+      "prompt": "The video begins with a swift dolly-in towards an exquisite, vintage pocket watch, its surface adorned with intricate jewels that catch the light. As the camera zooms in, the focus sharpens on the delicate, engraved monogram, revealing the initials \"J.L.\" in elegant script. The watch’s face, a masterpiece of craftsmanship, is frozen in time, its hands paused at precisely 10:10. The exposure remains constant, highlighting the watch’s gleaming metallic finish and the sparkle of its jewels. Suddenly, the camera rapidly pulls back, revealing the full grandeur of the pocket watch, resting on a plush velvet surface, its timeless elegance captured in perfect clarity.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v018",
+      "filename": "videos/v018.mp4",
+      "prompt": "A meticulously crafted lateral dolly shot begins at the platen of a vintage typewriter, its textured roller and paper guide evoking a sense of nostalgia. The camera glides smoothly, revealing the intricate array of keys, each with its own unique patina, hinting at countless stories typed over the years. The levers and typebars, though stationary, suggest potential energy, poised for action. As the camera continues its journey, the focus shifts to the side panel, showcasing the elegant curves and mechanical artistry of the typewriter’s design. The entire scene is bathed in soft, ambient light, highlighting the timeless beauty of this classic writing instrument.",
+      "motion_prompt_family": "lateral",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v019",
+      "filename": "videos/v019.mp4",
+      "prompt": "The camera gracefully advances toward an exquisite antique globe perched on an intricately carved wooden stand, its surface illuminated by soft, ambient light. As the frame narrows, the globe’s aged paper grain becomes evident, showcasing faded cartographic details and muted colors that whisper tales of exploration. The brass meridian, polished yet timeworn, gleams subtly, its engraved lines and numbers hinting at a bygone era of navigation. The room is enveloped in a serene stillness, with no hint of wind or vibration, allowing the globe’s historical elegance to captivate the viewer. The camera’s gentle motion is the only dynamic element, drawing the eye closer to the globe’s timeless allure.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v020",
+      "filename": "videos/v020.mp4",
+      "prompt": "In a narrow, ancient stone alley, the camera glides smoothly, capturing the intricate textures of weathered facades, where every crack and crevice tells a story of time. The alley is flanked by towering stone walls, their surfaces adorned with ornate reliefs and timeworn lintels, each doorway a portal to history. The atmosphere is still and silent, with no breeze to disturb the rigid tranquility. As the camera orbits, it remains close to the walls, emphasizing the craftsmanship and detail of the stonework, while the alley’s narrow confines create an intimate, almost claustrophobic ambiance, leaving the distant world unseen and mysterious.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    },
+    {
+      "id": "v021",
+      "filename": "videos/v021.mp4",
+      "prompt": "The camera embarks on a dynamic barrel-roll journey through a luminous glass atrium corridor, where sunlight streams through expansive windows, casting intricate patterns on the polished floor. As the camera gracefully rotates 180 degrees, the corridor’s features remain steadfast: sleek planters brimming with verdant foliage, modern benches inviting rest, and sleek directory boards offering guidance. The reflections on the glass walls and floor remain undisturbed, creating a mesmerizing kaleidoscope of light and shadow. The camera’s fluid motion captures the essence of the space, transforming the atrium into a captivating dance of architecture and light.",
+      "motion_prompt_family": "roll",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v022",
+      "filename": "videos/v022.mp4",
+      "prompt": "A static outdoor bench captured from multiple viewpoints.",
+      "motion_prompt_family": "other",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v023",
+      "filename": "videos/v023.mp4",
+      "prompt": "The video begins with a close-up of the bronze horse statue’s hooves, capturing the intricate details of the sculpted muscles and the polished sheen of the metal. As the camera tilts upward at a steady, deliberate pace, the viewer is drawn into the artistry of the statue, revealing the powerful legs and the graceful curve of the horse’s body. The room remains still and silent, with soft, even lighting casting gentle shadows that accentuate the statue’s form. The focus remains sharp, highlighting the texture and craftsmanship of the bronze. The camera continues its ascent, passing the horse’s strong neck, until it reaches the noble head, capturing the lifelike expression and finely detailed features, completing the serene and contemplative journey.",
+      "motion_prompt_family": "tilt",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    },
+    {
+      "id": "v024",
+      "filename": "videos/v024.mp4",
+      "prompt": "The camera smoothly glides around a quaint, enclosed plaza, its cobblestone floor echoing the whispers of history. At the heart of this serene courtyard stands a majestic stone statue, its features meticulously carved, exuding an aura of timeless grace. The surrounding walls, aged and weathered, form a protective embrace, their surfaces adorned with creeping ivy and subtle cracks that tell tales of the past. The light remains constant, casting gentle shadows that dance across the stone, enhancing the statue’s dignified presence. As the camera circles, the scene remains tranquil, capturing the essence of stillness and solitude within this hidden sanctuary.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v025",
+      "filename": "videos/v025.mp4",
+      "prompt": "In a serene gallery, a slow, deliberate 360-degree orbit captures a masterfully carved marble bust, poised elegantly on a polished pedestal. The bust, depicting a serene figure with intricate details, remains perfectly centered as the camera glides smoothly around it. The lighting casts soft shadows, accentuating the delicate features and the smooth texture of the marble. The exposure and white balance are meticulously set, ensuring the bust’s timeless beauty is captured in pristine clarity. The focus remains sharp, highlighting every curve and chisel mark, while the background fades into a gentle blur, emphasizing the sculpture’s artistry. The only motion is the camera’s graceful orbit, creating a mesmerizing, uninterrupted view of this exquisite masterpiece.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 121,
+      "fps": 30.0,
+      "duration_sec": 4.033333
+    },
+    {
+      "id": "v026",
+      "filename": "videos/v026.mp4",
+      "prompt": "The camera embarks on a dynamic barrel-roll journey through a luminous glass atrium corridor, where sunlight streams through expansive windows, casting intricate patterns on the polished floor. As the camera gracefully rotates 180 degrees, the corridor’s features remain steadfast: sleek planters brimming with verdant foliage, modern benches inviting rest, and sleek directory boards offering guidance. The reflections on the glass walls and floor remain undisturbed, creating a mesmerizing kaleidoscope of light and shadow. The camera’s fluid motion captures the essence of the space, transforming the atrium into a captivating dance of architecture and light.",
+      "motion_prompt_family": "roll",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    },
+    {
+      "id": "v027",
+      "filename": "videos/v027.mp4",
+      "prompt": "The video begins with a close-up of the base of a grand, fluted stone column, its intricate grooves and textures highlighted by steady, soft lighting. The camera swiftly tilts upward, maintaining perfect alignment with the column’s vertical lines, revealing the elegant, timeless craftsmanship of the stonework. As the camera ascends, the column’s fluting creates a mesmerizing pattern, leading the viewer’s eye toward the capital. Upon reaching the top, the capital is revealed in all its ornate glory, adorned with classical acanthus leaves and scrolls, set against the backdrop of a stately, immobile room. The entire scene remains serene and unchanging, with the brisk camera movement providing the only sense of motion.",
+      "motion_prompt_family": "tilt",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v028",
+      "filename": "videos/v028.mp4",
+      "prompt": "The video begins with a swift dolly-in towards an exquisite, vintage pocket watch, its surface adorned with intricate jewels that catch the light. As the camera zooms in, the focus sharpens on the delicate, engraved monogram, revealing the initials \"J.L.\" in elegant script. The watch’s face, a masterpiece of craftsmanship, is frozen in time, its hands paused at precisely 10:10. The exposure remains constant, highlighting the watch’s gleaming metallic finish and the sparkle of its jewels. Suddenly, the camera rapidly pulls back, revealing the full grandeur of the pocket watch, resting on a plush velvet surface, its timeless elegance captured in perfect clarity.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v029",
+      "filename": "videos/v029.mp4",
+      "prompt": "The camera smoothly glides along a row of vibrant shipping containers, stacked three high, their bold colors contrasting against the muted sky. The containers, in shades of red, blue, and green, stand in perfect alignment, their surfaces weathered by time and travel. The yard is enclosed by a sturdy chain-link fence, its metallic sheen catching the light, while the tops of the containers remain just below the frame’s upper edge, creating a sense of containment and order. The scene is still and silent, with no movement or fluttering fabric, emphasizing the solitude and industrial beauty of the setting as the camera tracks steadily along the row.",
+      "motion_prompt_family": "other",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v030",
+      "filename": "videos/v030.mp4",
+      "prompt": "The camera begins its slow, deliberate journey toward a meticulously crafted wicker basket resting on a rustic wooden table. The basket’s intricate weave, a tapestry of interlocking fibers, becomes increasingly detailed as the camera draws nearer. The ambient lighting casts a warm, golden hue, accentuating the basket’s natural tones and textures. The table’s rich, grainy surface complements the basket’s earthy aesthetic. As the camera continues its steady approach, the basket’s craftsmanship is revealed in stunning clarity, each fiber distinct and unmoving, creating a serene, almost meditative visual experience. The focus remains sharp, capturing the essence of artisanal skill.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v031",
+      "filename": "videos/v031.mp4",
+      "prompt": "In a narrow, ancient stone alley, the camera glides smoothly, capturing the intricate textures of weathered facades, where every crack and crevice tells a story of time. The alley is flanked by towering stone walls, their surfaces adorned with ornate reliefs and timeworn lintels, each doorway a portal to history. The atmosphere is still and silent, with no breeze to disturb the rigid tranquility. As the camera orbits, it remains close to the walls, emphasizing the craftsmanship and detail of the stonework, while the alley’s narrow confines create an intimate, almost claustrophobic ambiance, leaving the distant world unseen and mysterious.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v032",
+      "filename": "videos/v032.mp4",
+      "prompt": "A sleek, dynamic shot captures a rapid lateral pass across a classic wooden chessboard, where two rooks stand as sentinels at opposite ends. The camera glides swiftly, skimming just above the meticulously arranged pieces, each casting a sharp shadow on the polished squares. The board’s plane remains nearly parallel to the sensor, creating a mesmerizing blur of alternating dark and light squares. The pieces, carved with precision, stand immobile and unwavering, their intricate details highlighted by steady, soft lighting. The focus remains sharp, emphasizing the rooks’ commanding presence, while the camera’s swift motion creates a sense of urgency and fluidity.",
+      "motion_prompt_family": "lateral",
+      "frame_count": 96,
+      "fps": 24.0,
+      "duration_sec": 4.0
+    },
+    {
+      "id": "v033",
+      "filename": "videos/v033.mp4",
+      "prompt": "The video begins with a close-up of the bronze horse statue’s hooves, capturing the intricate details of the sculpted muscles and the polished sheen of the metal. As the camera tilts upward at a steady, deliberate pace, the viewer is drawn into the artistry of the statue, revealing the powerful legs and the graceful curve of the horse’s body. The room remains still and silent, with soft, even lighting casting gentle shadows that accentuate the statue’s form. The focus remains sharp, highlighting the texture and craftsmanship of the bronze. The camera continues its ascent, passing the horse’s strong neck, until it reaches the noble head, capturing the lifelike expression and finely detailed features, completing the serene and contemplative journey.",
+      "motion_prompt_family": "tilt",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v034",
+      "filename": "videos/v034.mp4",
+      "prompt": "The camera smoothly glides through a bustling workshop, revealing a series of workbenches laden with an array of hand tools, neatly organized bins, and pegboards adorned with hanging implements. Parts trays, filled with various components, line the benches, each meticulously arranged. The lighting casts a warm, consistent glow, highlighting the rich textures of wood and metal. The focus remains sharp, capturing every detail of the stationary objects, from the gleaming wrenches to the colorful bins. As the camera tracks parallel to the benches, the scene exudes a sense of order and craftsmanship, with the fixed exposure maintaining a clear, vivid view of this industrious space.",
+      "motion_prompt_family": "other",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v035",
+      "filename": "videos/v035.mp4",
+      "prompt": "A static barn scene captured by a moving camera from multiple viewpoints.",
+      "motion_prompt_family": "other",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v036",
+      "filename": "videos/v036.mp4",
+      "prompt": "The camera glides slowly through a serene cloister courtyard, enveloped by elegant arcades on each side. The stone columns, adorned with intricately carved capitals, stand as silent sentinels beneath the roofline, their artistry captured in exquisite detail. The courtyard’s floor is a mosaic of aged stone tiles, each telling its own story. The ambient light bathes the scene in a soft, timeless glow, casting gentle shadows that dance across the surfaces. As the camera advances, the tranquility of the space is palpable, with the arches framing views of the lush, manicured garden at the center, inviting contemplation and peace.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v037",
+      "filename": "videos/v037.mp4",
+      "prompt": "In a serene, minimalist gallery, the camera gracefully arcs around a solitary abstract sculpture, its smooth curves and intricate textures highlighted by the steady, soft lighting. The sculpture, a fusion of metal and stone, stands as the focal point, its form evoking a sense of mystery and contemplation. Glass display cases, housing delicate artifacts, and subtle wall labels linger in the periphery, their presence understated yet integral to the gallery’s ambiance. The constant lighting casts gentle shadows, enhancing the sculpture’s allure. The only movement is the camera’s fluid motion, creating a tranquil, immersive experience that invites reflection and appreciation.",
+      "motion_prompt_family": "other",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v038",
+      "filename": "videos/v038.mp4",
+      "prompt": "The camera swiftly navigates through a dimly lit parking structure, weaving through ground-level lanes bordered by imposing concrete walls and sturdy columns. The scene is eerily still, with parked cars, directional signs, and various fixtures frozen in time, creating a stark contrast to the camera’s dynamic movement. As it executes two precise, sharp turns, the camera captures the texture of the concrete and the subtle play of shadows, enhancing the sense of speed and agility. The atmosphere is tense yet captivating, with the camera’s fluid motion providing a sense of urgency and exploration within the static environment.",
+      "motion_prompt_family": "other",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v039",
+      "filename": "videos/v039.mp4",
+      "prompt": "A dynamic aerial view captures a robust freight locomotive, its vibrant colors contrasting against the towering high retaining wall, as the camera swiftly orbits around it. The locomotive, with its intricate details and weathered exterior, stands motionless on the tracks, surrounded by an expansive, quiet rail yard. The camera’s rapid circular motion creates a dizzying effect, emphasizing the locomotive’s imposing presence and the wall’s textured surface. As the orbit tightens, the locomotive’s features become more pronounced, showcasing its powerful build and the industrial ambiance of the yard, while the retaining wall remains a constant, looming backdrop.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v040",
+      "filename": "videos/v040.mp4",
+      "prompt": "A sleek, dynamic arc swiftly encircles a vintage film camera perched on a sturdy tripod, capturing its essence from a front three-quarter angle to a rear three-quarter perspective. The camera, a classic piece with intricate dials and a polished lens, remains perfectly still, exuding timeless elegance. The tripod, robust and unwavering, supports the camera with precision. As the viewpoint sweeps rapidly around, maintaining a constant height, the background blurs into a soft focus, emphasizing the camera’s intricate details and craftsmanship. The lighting casts subtle highlights on the camera’s metallic surface, enhancing its vintage allure.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v041",
+      "filename": "videos/v041.mp4",
+      "prompt": "The camera begins its graceful descent from a bird’s-eye view, revealing a stunning ceramic vase with intricate glazed relief patterns. As it slowly lowers, the vase’s exquisite details become more pronounced, showcasing delicate floral motifs and swirling designs in rich, earthy tones. The vase sits on a polished wooden surface, its glossy finish reflecting the soft ambient light. The surroundings remain perfectly still, enhancing the vase’s elegance and craftsmanship. The camera continues its descent, eventually settling into a tight side profile, capturing the vase’s curves and textures with precision. The lighting remains constant, casting gentle shadows that accentuate the vase’s artistry, creating a serene and contemplative visual experience.",
+      "motion_prompt_family": "other",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    },
+    {
+      "id": "v042",
+      "filename": "videos/v042.mp4",
+      "prompt": "The video begins with a close-up of the bronze horse statue’s hooves, capturing the intricate details of the sculpted muscles and the polished sheen of the metal. As the camera tilts upward at a steady, deliberate pace, the viewer is drawn into the artistry of the statue, revealing the powerful legs and the graceful curve of the horse’s body. The room remains still and silent, with soft, even lighting casting gentle shadows that accentuate the statue’s form. The focus remains sharp, highlighting the texture and craftsmanship of the bronze. The camera continues its ascent, passing the horse’s strong neck, until it reaches the noble head, capturing the lifelike expression and finely detailed features, completing the serene and contemplative journey.",
+      "motion_prompt_family": "tilt",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v043",
+      "filename": "videos/v043.mp4",
+      "prompt": "The camera swiftly tilts and dollies around a grand glass display case, filled with an array of dazzling cut gemstones, each facet catching the light with precision. As the camera circles one corner, the gems remain perfectly still, their vibrant colors and intricate cuts highlighted by consistent specular reflections. The brisk movement of the camera creates a dynamic perspective, emphasizing the brilliance and clarity of the gemstones. Exiting to a wider view, the display case stands majestically in the center of an elegant showroom, its contents shimmering under the soft, ambient lighting, inviting admiration and awe.",
+      "motion_prompt_family": "tilt",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v044",
+      "filename": "videos/v044.mp4",
+      "prompt": "The camera embarks on a dynamic barrel-roll journey through a luminous glass atrium corridor, where sunlight streams through expansive windows, casting intricate patterns on the polished floor. As the camera gracefully rotates 180 degrees, the corridor’s features remain steadfast: sleek planters brimming with verdant foliage, modern benches inviting rest, and sleek directory boards offering guidance. The reflections on the glass walls and floor remain undisturbed, creating a mesmerizing kaleidoscope of light and shadow. The camera’s fluid motion captures the essence of the space, transforming the atrium into a captivating dance of architecture and light.",
+      "motion_prompt_family": "roll",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v045",
+      "filename": "videos/v045.mp4",
+      "prompt": "The video begins with a close-up of the bronze horse statue’s hooves, capturing the intricate details of the sculpted muscles and the polished sheen of the metal. As the camera tilts upward at a steady, deliberate pace, the viewer is drawn into the artistry of the statue, revealing the powerful legs and the graceful curve of the horse’s body. The room remains still and silent, with soft, even lighting casting gentle shadows that accentuate the statue’s form. The focus remains sharp, highlighting the texture and craftsmanship of the bronze. The camera continues its ascent, passing the horse’s strong neck, until it reaches the noble head, capturing the lifelike expression and finely detailed features, completing the serene and contemplative journey.",
+      "motion_prompt_family": "tilt",
+      "frame_count": 121,
+      "fps": 30.0,
+      "duration_sec": 4.033333
+    },
+    {
+      "id": "v046",
+      "filename": "videos/v046.mp4",
+      "prompt": "The video begins with a close-up of the base of a grand, fluted stone column, its intricate grooves and textures highlighted by steady, soft lighting. The camera swiftly tilts upward, maintaining perfect alignment with the column’s vertical lines, revealing the elegant, timeless craftsmanship of the stonework. As the camera ascends, the column’s fluting creates a mesmerizing pattern, leading the viewer’s eye toward the capital. Upon reaching the top, the capital is revealed in all its ornate glory, adorned with classical acanthus leaves and scrolls, set against the backdrop of a stately, immobile room. The entire scene remains serene and unchanging, with the brisk camera movement providing the only sense of motion.",
+      "motion_prompt_family": "tilt",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    },
+    {
+      "id": "v047",
+      "filename": "videos/v047.mp4",
+      "prompt": "The camera glides slowly along a perforated metal screen wall, revealing a mesmerizing pattern of repeating circular holes. The oxidized texture of the metal, with its rich hues of rust and patina, creates a tapestry of earthy tones. As the camera maintains a constant angle, the intricate details of the screen’s surface become apparent, showcasing the interplay of light and shadow across the perforations. The static surroundings, including a hint of industrial architecture in the background, remain unchanged, emphasizing the serene, rhythmic motion of the camera’s lateral journey. The scene evokes a sense of timelessness and industrial beauty.",
+      "motion_prompt_family": "lateral",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v048",
+      "filename": "videos/v048.mp4",
+      "prompt": "The camera smoothly glides along a row of vibrant shipping containers, stacked three high, their bold colors contrasting against the muted sky. The containers, in shades of red, blue, and green, stand in perfect alignment, their surfaces weathered by time and travel. The yard is enclosed by a sturdy chain-link fence, its metallic sheen catching the light, while the tops of the containers remain just below the frame’s upper edge, creating a sense of containment and order. The scene is still and silent, with no movement or fluttering fabric, emphasizing the solitude and industrial beauty of the setting as the camera tracks steadily along the row.",
+      "motion_prompt_family": "other",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v049",
+      "filename": "videos/v049.mp4",
+      "prompt": "In a serene gallery, a slow, deliberate 360-degree orbit captures a masterfully carved marble bust, poised elegantly on a polished pedestal. The bust, depicting a serene figure with intricate details, remains perfectly centered as the camera glides smoothly around it. The lighting casts soft shadows, accentuating the delicate features and the smooth texture of the marble. The exposure and white balance are meticulously set, ensuring the bust’s timeless beauty is captured in pristine clarity. The focus remains sharp, highlighting every curve and chisel mark, while the background fades into a gentle blur, emphasizing the sculpture’s artistry. The only motion is the camera’s graceful orbit, creating a mesmerizing, uninterrupted view of this exquisite masterpiece.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 121,
+      "fps": 30.0,
+      "duration_sec": 4.033333
+    },
+    {
+      "id": "v050",
+      "filename": "videos/v050.mp4",
+      "prompt": "The camera races through a narrow brick service alley, capturing the gritty details of the urban landscape. The walls, close and confining, are lined with weathered doors, rusted meters, and overflowing dumpsters, each telling a story of the city’s hidden life. The bricks, aged and stained, create a textured backdrop as the camera speeds past, maintaining a tight focus to emphasize the claustrophobic nature of the alley. The scene is static, with no movement from the objects, enhancing the sensation of speed and urgency. The alley’s dim lighting casts long shadows, adding to the mysterious and slightly ominous atmosphere, as the camera’s swift journey continues uninterrupted.",
+      "motion_prompt_family": "other",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    },
+    {
+      "id": "v051",
+      "filename": "videos/v051.mp4",
+      "prompt": "The video begins with a close-up of the bronze horse statue’s hooves, capturing the intricate details of the sculpted muscles and the polished sheen of the metal. As the camera tilts upward at a steady, deliberate pace, the viewer is drawn into the artistry of the statue, revealing the powerful legs and the graceful curve of the horse’s body. The room remains still and silent, with soft, even lighting casting gentle shadows that accentuate the statue’s form. The focus remains sharp, highlighting the texture and craftsmanship of the bronze. The camera continues its ascent, passing the horse’s strong neck, until it reaches the noble head, capturing the lifelike expression and finely detailed features, completing the serene and contemplative journey.",
+      "motion_prompt_family": "tilt",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v052",
+      "filename": "videos/v052.mp4",
+      "prompt": "The video begins with a close-up of the bronze horse statue’s hooves, capturing the intricate details of the sculpted muscles and the polished sheen of the metal. As the camera tilts upward at a steady, deliberate pace, the viewer is drawn into the artistry of the statue, revealing the powerful legs and the graceful curve of the horse’s body. The room remains still and silent, with soft, even lighting casting gentle shadows that accentuate the statue’s form. The focus remains sharp, highlighting the texture and craftsmanship of the bronze. The camera continues its ascent, passing the horse’s strong neck, until it reaches the noble head, capturing the lifelike expression and finely detailed features, completing the serene and contemplative journey.",
+      "motion_prompt_family": "tilt",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v053",
+      "filename": "videos/v053.mp4",
+      "prompt": "The camera begins its slow, deliberate journey at the base of a towering wooden abstract sculpture, its intricate grain and texture immediately captivating. As the dolly glides diagonally upward, the sculpture’s complex curves and angles are revealed, each facet catching the ambient light in a unique way, creating a play of shadows and highlights. The fixed focus ensures every detail remains sharp, while the consistent white balance maintains the sculpture’s natural hues. The background remains unobtrusive, allowing the sculpture’s artistry to dominate the frame. The camera’s smooth ascent culminates at the sculpture’s opposite top corner, offering a final, breathtaking perspective of this wooden masterpiece.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v054",
+      "filename": "videos/v054.mp4",
+      "prompt": "A sleek, polished black grand piano stands majestically in a spacious, elegantly lit room, its glossy surface reflecting the ambient light. The camera begins a gentle orbit around the piano, capturing the smooth, stable reflections that glide effortlessly across the curved lid, creating a mesmerizing dance of light and shadow. The room is tastefully decorated, with soft, neutral tones that complement the piano’s deep black finish. As the camera continues its steady circle, the intricate details of the piano’s craftsmanship are revealed, from the delicate curve of its legs to the subtle sheen of its keys. The atmosphere is serene and timeless, with the constant exposure and white balance maintaining a harmonious visual experience, allowing the viewer to fully appreciate the piano’s elegance and the tranquil beauty of the setting.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v055",
+      "filename": "videos/v055.mp4",
+      "prompt": "A meticulously crafted lateral dolly shot begins at the platen of a vintage typewriter, its textured roller and paper guide evoking a sense of nostalgia. The camera glides smoothly, revealing the intricate array of keys, each with its own unique patina, hinting at countless stories typed over the years. The levers and typebars, though stationary, suggest potential energy, poised for action. As the camera continues its journey, the focus shifts to the side panel, showcasing the elegant curves and mechanical artistry of the typewriter’s design. The entire scene is bathed in soft, ambient light, highlighting the timeless beauty of this classic writing instrument.",
+      "motion_prompt_family": "lateral",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    },
+    {
+      "id": "v056",
+      "filename": "videos/v056.mp4",
+      "prompt": "The camera swiftly navigates through a deserted market arcade, gliding under a series of closed stalls and vibrant awnings, each adorned with colorful, fixed signs. The lighting remains consistently warm, casting a gentle glow over the scene, enhancing the rich textures of the fabric and wood. As the camera accelerates, it executes a graceful S-curve, weaving smoothly between the stalls, capturing the intricate details of the market’s architecture. The fixed awnings flutter slightly in the breeze, adding a sense of life to the otherwise still environment, while the constant speed of the camera creates a dynamic, immersive experience.",
+      "motion_prompt_family": "other",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v057",
+      "filename": "videos/v057.mp4",
+      "prompt": "In a serene gallery, a slow, deliberate 360-degree orbit captures a masterfully carved marble bust, poised elegantly on a polished pedestal. The bust, depicting a serene figure with intricate details, remains perfectly centered as the camera glides smoothly around it. The lighting casts soft shadows, accentuating the delicate features and the smooth texture of the marble. The exposure and white balance are meticulously set, ensuring the bust’s timeless beauty is captured in pristine clarity. The focus remains sharp, highlighting every curve and chisel mark, while the background fades into a gentle blur, emphasizing the sculpture’s artistry. The only motion is the camera’s graceful orbit, creating a mesmerizing, uninterrupted view of this exquisite masterpiece.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    },
+    {
+      "id": "v058",
+      "filename": "videos/v058.mp4",
+      "prompt": "A static outdoor bench captured from multiple viewpoints.",
+      "motion_prompt_family": "other",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v059",
+      "filename": "videos/v059.mp4",
+      "prompt": "The camera gracefully arcs around a luxurious gilded wall mirror, its ornate frame glistening with intricate golden details. The mirror reflects a serene, softly lit room, capturing only the immediate backdrop—a plush velvet armchair and a delicate vase of fresh lilies on a polished wooden table. The camera maintains a consistent distance, ensuring the reflections remain steady and undisturbed. The room’s ambiance is tranquil, with warm, ambient lighting casting gentle shadows. The mirror’s surface is pristine, reflecting the elegance of the setting without any flicker or change, as the camera’s smooth motion reveals the timeless beauty of the scene.",
+      "motion_prompt_family": "other",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v060",
+      "filename": "videos/v060.mp4",
+      "prompt": "A static outdoor bench captured from multiple viewpoints.",
+      "motion_prompt_family": "other",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v061",
+      "filename": "videos/v061.mp4",
+      "prompt": "The camera glides smoothly down the central aisle of a grand library, flanked by towering bookcases packed tightly with an array of colorful books, their spines creating a mosaic of knowledge. The shelves, lined with neatly arranged volumes, are interspersed with small, elegant signs indicating various genres and sections. The lighting is warm and steady, casting a gentle glow that highlights the rich wood of the bookcases and the intricate patterns of the carpeted floor. As the camera advances at a constant pace, the scene remains perfectly still, evoking a sense of timelessness and tranquility, inviting viewers to immerse themselves in the serene ambiance of this literary sanctuary.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 96,
+      "fps": 24.0,
+      "duration_sec": 4.0
+    },
+    {
+      "id": "v062",
+      "filename": "videos/v062.mp4",
+      "prompt": "The camera embarks on a dynamic barrel-roll journey through a luminous glass atrium corridor, where sunlight streams through expansive windows, casting intricate patterns on the polished floor. As the camera gracefully rotates 180 degrees, the corridor’s features remain steadfast: sleek planters brimming with verdant foliage, modern benches inviting rest, and sleek directory boards offering guidance. The reflections on the glass walls and floor remain undisturbed, creating a mesmerizing kaleidoscope of light and shadow. The camera’s fluid motion captures the essence of the space, transforming the atrium into a captivating dance of architecture and light.",
+      "motion_prompt_family": "roll",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v063",
+      "filename": "videos/v063.mp4",
+      "prompt": "The camera glides slowly through a serene cloister courtyard, enveloped by elegant arcades on each side. The stone columns, adorned with intricately carved capitals, stand as silent sentinels beneath the roofline, their artistry captured in exquisite detail. The courtyard’s floor is a mosaic of aged stone tiles, each telling its own story. The ambient light bathes the scene in a soft, timeless glow, casting gentle shadows that dance across the surfaces. As the camera advances, the tranquility of the space is palpable, with the arches framing views of the lush, manicured garden at the center, inviting contemplation and peace.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v064",
+      "filename": "videos/v064.mp4",
+      "prompt": "The camera glides smoothly along a wall of glass bricks, each brick capturing and distorting the static room beyond with mesmerizing refractions. The bricks, arranged in a precise grid, create a kaleidoscope effect, bending light and subtly altering the view of the room’s muted tones and simple furnishings. As the camera maintains a constant distance, the glass bricks reveal a dance of light and shadow, with each brick acting as a lens, offering a unique perspective of the stillness beyond. The gentle dolly movement emphasizes the serene, unchanging nature of the room, while the glass bricks transform the ordinary into a captivating visual symphony.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v065",
+      "filename": "videos/v065.mp4",
+      "prompt": "The camera begins its slow, deliberate journey at the base of a towering wooden abstract sculpture, its intricate grain and texture immediately captivating. As the dolly glides diagonally upward, the sculpture’s complex curves and angles are revealed, each facet catching the ambient light in a unique way, creating a play of shadows and highlights. The fixed focus ensures every detail remains sharp, while the consistent white balance maintains the sculpture’s natural hues. The background remains unobtrusive, allowing the sculpture’s artistry to dominate the frame. The camera’s smooth ascent culminates at the sculpture’s opposite top corner, offering a final, breathtaking perspective of this wooden masterpiece.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v066",
+      "filename": "videos/v066.mp4",
+      "prompt": "A static outdoor bench captured from multiple viewpoints.",
+      "motion_prompt_family": "other",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v067",
+      "filename": "videos/v067.mp4",
+      "prompt": "In a serene gallery, a slow, deliberate 360-degree orbit captures a masterfully carved marble bust, poised elegantly on a polished pedestal. The bust, depicting a serene figure with intricate details, remains perfectly centered as the camera glides smoothly around it. The lighting casts soft shadows, accentuating the delicate features and the smooth texture of the marble. The exposure and white balance are meticulously set, ensuring the bust’s timeless beauty is captured in pristine clarity. The focus remains sharp, highlighting every curve and chisel mark, while the background fades into a gentle blur, emphasizing the sculpture’s artistry. The only motion is the camera’s graceful orbit, creating a mesmerizing, uninterrupted view of this exquisite masterpiece.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v068",
+      "filename": "videos/v068.mp4",
+      "prompt": "The camera swiftly orbits a gleaming, polished metal espresso machine, capturing its sleek, reflective surface in stunning detail. As it circles, the machine’s curves and edges reveal dazzling specular highlights, creating a dynamic play of light and shadow. The environment remains perfectly still, with the espresso machine standing as the centerpiece against a minimalist backdrop. The lighting is expertly set, casting soft, even illumination that accentuates the machine’s contours. The camera’s rapid movement provides a seamless 360-degree view, showcasing the espresso machine’s elegant design and craftsmanship from every angle, while the surroundings remain unchanged.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v069",
+      "filename": "videos/v069.mp4",
+      "prompt": "The camera swiftly ascends a sleek, modern spiral staircase in a spacious office atrium, capturing the polished metal handrails and glass balusters in sharp detail. As it spirals upward, the lens brushes past minimalist signage, reflecting the building’s contemporary design. The environment remains static and pristine, with the staircase’s geometric precision emphasized by the constant radius of the climb. The atrium’s ambient lighting casts subtle reflections on the surfaces, enhancing the sense of motion. The camera’s ascent is smooth and uninterrupted, offering a dynamic perspective of the architectural elegance and the stillness of the surrounding space.",
+      "motion_prompt_family": "other",
+      "frame_count": 49,
+      "fps": 8.0,
+      "duration_sec": 6.125
+    },
+    {
+      "id": "v070",
+      "filename": "videos/v070.mp4",
+      "prompt": "In a grand museum hall, the camera glides gracefully, capturing the serene ambiance. Display plinths, adorned with intricate artifacts, stand in orderly rows, each accompanied by detailed information placards. The lighting casts a soft, consistent glow, highlighting the exhibits’ historical significance. As the camera moves, it reveals the majestic dinosaur skeleton, its massive feet firmly planted, leading up to its towering skull. The skeletal structure, a testament to ancient times, remains motionless, exuding a sense of timelessness. The camera’s steady drift emphasizes the hall’s quiet reverence, inviting viewers to immerse themselves in the museum’s rich tapestry of history.",
+      "motion_prompt_family": "other",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v071",
+      "filename": "videos/v071.mp4",
+      "prompt": "In a serene gallery, a slow, deliberate 360-degree orbit captures a masterfully carved marble bust, poised elegantly on a polished pedestal. The bust, depicting a serene figure with intricate details, remains perfectly centered as the camera glides smoothly around it. The lighting casts soft shadows, accentuating the delicate features and the smooth texture of the marble. The exposure and white balance are meticulously set, ensuring the bust’s timeless beauty is captured in pristine clarity. The focus remains sharp, highlighting every curve and chisel mark, while the background fades into a gentle blur, emphasizing the sculpture’s artistry. The only motion is the camera’s graceful orbit, creating a mesmerizing, uninterrupted view of this exquisite masterpiece.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    },
+    {
+      "id": "v072",
+      "filename": "videos/v072.mp4",
+      "prompt": "A meticulously crafted lateral dolly shot begins at the platen of a vintage typewriter, its textured roller and paper guide evoking a sense of nostalgia. The camera glides smoothly, revealing the intricate array of keys, each with its own unique patina, hinting at countless stories typed over the years. The levers and typebars, though stationary, suggest potential energy, poised for action. As the camera continues its journey, the focus shifts to the side panel, showcasing the elegant curves and mechanical artistry of the typewriter’s design. The entire scene is bathed in soft, ambient light, highlighting the timeless beauty of this classic writing instrument.",
+      "motion_prompt_family": "lateral",
+      "frame_count": 121,
+      "fps": 24.0,
+      "duration_sec": 5.041667
+    },
+    {
+      "id": "v073",
+      "filename": "videos/v073.mp4",
+      "prompt": "The video begins with a close-up of the bronze horse statue’s hooves, capturing the intricate details of the sculpted muscles and the polished sheen of the metal. As the camera tilts upward at a steady, deliberate pace, the viewer is drawn into the artistry of the statue, revealing the powerful legs and the graceful curve of the horse’s body. The room remains still and silent, with soft, even lighting casting gentle shadows that accentuate the statue’s form. The focus remains sharp, highlighting the texture and craftsmanship of the bronze. The camera continues its ascent, passing the horse’s strong neck, until it reaches the noble head, capturing the lifelike expression and finely detailed features, completing the serene and contemplative journey.",
+      "motion_prompt_family": "tilt",
+      "frame_count": 121,
+      "fps": 30.0,
+      "duration_sec": 4.033333
+    },
+    {
+      "id": "v074",
+      "filename": "videos/v074.mp4",
+      "prompt": "In a serene gallery, a slow, deliberate 360-degree orbit captures a masterfully carved marble bust, poised elegantly on a polished pedestal. The bust, depicting a serene figure with intricate details, remains perfectly centered as the camera glides smoothly around it. The lighting casts soft shadows, accentuating the delicate features and the smooth texture of the marble. The exposure and white balance are meticulously set, ensuring the bust’s timeless beauty is captured in pristine clarity. The focus remains sharp, highlighting every curve and chisel mark, while the background fades into a gentle blur, emphasizing the sculpture’s artistry. The only motion is the camera’s graceful orbit, creating a mesmerizing, uninterrupted view of this exquisite masterpiece.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 96,
+      "fps": 24.0,
+      "duration_sec": 4.0
+    },
+    {
+      "id": "v075",
+      "filename": "videos/v075.mp4",
+      "prompt": "The camera gracefully advances toward an exquisite antique globe perched on an intricately carved wooden stand, its surface illuminated by soft, ambient light. As the frame narrows, the globe’s aged paper grain becomes evident, showcasing faded cartographic details and muted colors that whisper tales of exploration. The brass meridian, polished yet timeworn, gleams subtly, its engraved lines and numbers hinting at a bygone era of navigation. The room is enveloped in a serene stillness, with no hint of wind or vibration, allowing the globe’s historical elegance to captivate the viewer. The camera’s gentle motion is the only dynamic element, drawing the eye closer to the globe’s timeless allure.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 121,
+      "fps": 30.0,
+      "duration_sec": 4.033333
+    },
+    {
+      "id": "v076",
+      "filename": "videos/v076.mp4",
+      "prompt": "In a narrow, ancient stone alley, the camera glides smoothly, capturing the intricate textures of weathered facades, where every crack and crevice tells a story of time. The alley is flanked by towering stone walls, their surfaces adorned with ornate reliefs and timeworn lintels, each doorway a portal to history. The atmosphere is still and silent, with no breeze to disturb the rigid tranquility. As the camera orbits, it remains close to the walls, emphasizing the craftsmanship and detail of the stonework, while the alley’s narrow confines create an intimate, almost claustrophobic ambiance, leaving the distant world unseen and mysterious.",
+      "motion_prompt_family": "orbit",
+      "frame_count": 81,
+      "fps": 16.0,
+      "duration_sec": 5.0625
+    },
+    {
+      "id": "v077",
+      "filename": "videos/v077.mp4",
+      "prompt": "A meticulously crafted lateral dolly shot begins at the platen of a vintage typewriter, its textured roller and paper guide evoking a sense of nostalgia. The camera glides smoothly, revealing the intricate array of keys, each with its own unique patina, hinting at countless stories typed over the years. The levers and typebars, though stationary, suggest potential energy, poised for action. As the camera continues its journey, the focus shifts to the side panel, showcasing the elegant curves and mechanical artistry of the typewriter’s design. The entire scene is bathed in soft, ambient light, highlighting the timeless beauty of this classic writing instrument.",
+      "motion_prompt_family": "lateral",
+      "frame_count": 121,
+      "fps": 30.0,
+      "duration_sec": 4.033333
+    },
+    {
+      "id": "v078",
+      "filename": "videos/v078.mp4",
+      "prompt": "A steady camera glides through a covered market arcade, capturing the quiet ambiance of closed stalls and rigid awnings. The path is lined with colorful, yet motionless, signs and awnings, each displaying faded logos and names, hinting at the market’s bustling past. The camera’s smooth movement contrasts with the stillness of the scene, emphasizing the absence of people and activity. The arcade’s architecture, with its intricate ironwork and vintage lamps, adds a nostalgic charm. As the camera advances, the muted colors and soft lighting create a serene, almost timeless atmosphere, evoking a sense of calm and reflection.",
+      "motion_prompt_family": "dolly",
+      "frame_count": 129,
+      "fps": 24.0,
+      "duration_sec": 5.375
+    }
+  ]
+}
+</script>
+<script>
+(function(){
+  "use strict";
+  const GROUPS = [
+    {key:"A", type:"radio", title:"镜头运动", hint:"单选，必填", required:true, opts:[
+      ["A1","画面完全静止，几乎是一张图"],
+      ["A2","镜头基本不动，只有画面里的东西在动"],
+      ["A3","镜头原地转（左右摇、上下抬低头、滚转），没有走动，看不出近处比远处动得快"],
+      ["A4","只有放大缩小（变焦感），视角没有变化"],
+      ["A5","镜头真的在移动（环绕、平移、前进后退），看得出视差：近处比远处动得快"],
+      ["A6","镜头运动混乱（抖动、来回、跳变）"],
+      ["A7","看不出或说不准"]]},
+    {key:"Ap", type:"check", title:"镜头补充", hint:"多选", opts:[
+      ["A8","运动方向和提示词不符"],
+      ["A9","运动幅度很小"],
+      ["A10","中途有剪辑或镜头切换"]]},
+    {key:"D", type:"radio", title:"总体判断", hint:"单选，必填", required:true, opts:[
+      ["D1","能当作一个静态三维场景的可靠拍摄"],
+      ["D2","大体可用，但有局部问题"],
+      ["D3","不适合用来评测静态三维"],
+      ["D4","说不准"]]},
+    {key:"B", type:"check", title:"内容的运动或变化", hint:"多选", opts:[
+      ["B1","有人、动物、车、水、火、风等在合理地运动"],
+      ["B2","物体整体在场景里移动或转动（刚体）"],
+      ["B3","物体非刚性变形（扭曲、流动、像橡皮泥）"],
+      ["B4","物体凭空出现或消失"],
+      ["B5","物体结构或数量前后不一致（比如腿的数目变了）"],
+      ["B6","背景或场景布局在变（墙、地面、远景变形）"],
+      ["B7","纹理、颜色或光照闪烁、渐变"],
+      ["B8","视角转过去再转回来，内容对不上"],
+      ["B9","没有明显的内容变化"]]},
+    {key:"C", type:"check", title:"画面与内容", hint:"多选", opts:[
+      ["C1","模糊或分辨率低"],
+      ["C2","明显伪影（噪点、马赛克、接缝）"],
+      ["C3","细节非常丰富（复杂纹理、很多小物体）"],
+      ["C4","画面很简单（大片纯色、几乎没有纹理）"],
+      ["C5","有反光、透明、玻璃、水面等难重建的材质"],
+      ["C6","有文字、水印或字幕"],
+      ["C7","内容与提示词不符"]]}
+  ];
+  const FAMILY = {orbit:"环绕", dolly:"推拉", lateral:"平移", roll:"滚转", tilt:"俯仰", pan:"摇镜", other:"其他"};
+  const STORE_KEY = "o31-labels-v1", RATER_KEY = "o31-rater";
+
+  let manifest = [];
+  try { manifest = (JSON.parse(document.getElementById("manifest").textContent).videos || []).map(v => ({id:v.id, file:v.filename, prompt:v.prompt, family:v.motion_prompt_family})); } catch(e) { manifest = []; }
+  const $ = id => document.getElementById(id);
+  const total = manifest.length;
+  $("totalCount").textContent = total;
+
+  // ---- state ----
+  let labels = {};
+  try { const raw = localStorage.getItem(STORE_KEY); if (raw) labels = JSON.parse(raw) || {}; } catch(e) { labels = {}; }
+  let cur = 0, rate = 1, serverOK = false, skipArmed = false, saving = false;
+  try { $("rater").value = localStorage.getItem(RATER_KEY) || ""; } catch(e) {}
+  $("rater").addEventListener("change", () => { try { localStorage.setItem(RATER_KEY, $("rater").value.trim()); } catch(e) {} });
+  async function postVote(rec){
+    const r = await fetch("/api/vote", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(rec)});
+    if (!r.ok) throw new Error("http " + r.status);
+    return r.json();
+  }
+
+  // ---- build the form ----
+  const groupsEl = $("groups");
+  const colL = document.createElement("div"), colR = document.createElement("div");
+  colL.className = colR.className = "col";
+  groupsEl.append(colL, colR);
+  for (const g of GROUPS){
+    const fs = document.createElement("fieldset");
+    fs.className = "grp"; fs.id = "grp-" + g.key;
+    const lg = document.createElement("legend");
+    lg.innerHTML = '<span class="code"></span><span></span><em></em>';
+    lg.children[0].textContent = g.key === "Ap" ? "A+" : g.key;
+    lg.children[1].textContent = g.title;
+    lg.children[2].textContent = g.hint;
+    fs.appendChild(lg);
+    for (const [code, text] of g.opts){
+      const lab = document.createElement("label");
+      lab.className = "opt";
+      const inp = document.createElement("input");
+      inp.type = g.type === "radio" ? "radio" : "checkbox";
+      inp.name = g.key; inp.value = code; inp.id = "opt-" + code;
+      const oc = document.createElement("span"); oc.className = "oc"; oc.textContent = code;
+      const tx = document.createElement("span"); tx.textContent = text;
+      lab.append(inp, oc, tx);
+      fs.appendChild(lab);
+    }
+    (g.key === "B" || g.key === "C" ? colR : colL).appendChild(fs);
+  }
+
+  function readForm(){
+    const out = {};
+    for (const g of GROUPS){
+      const checked = [...document.querySelectorAll('input[name="' + g.key + '"]:checked')].map(i => i.value);
+      out[g.key] = g.type === "radio" ? (checked[0] || null) : checked;
+    }
+    out.note = $("note").value.trim();
+    return out;
+  }
+  function fillForm(rec){
+    for (const g of GROUPS){
+      const vals = rec ? (g.type === "radio" ? [rec[g.key]] : (rec[g.key] || [])) : [];
+      document.querySelectorAll('input[name="' + g.key + '"]').forEach(i => { i.checked = vals.includes(i.value); });
+      $("grp-" + g.key).classList.remove("missing");
+    }
+    $("note").value = rec && rec.note ? rec.note : "";
+  }
+  function sameAsSaved(){
+    const f = readForm(), s = labels[manifest[cur].id];
+    if (!s) return GROUPS.every(g => g.type === "radio" ? !f[g.key] : f[g.key].length === 0) && !f.note;
+    return GROUPS.every(g => g.type === "radio" ? f[g.key] === (s[g.key] || null) : JSON.stringify([...f[g.key]].sort()) === JSON.stringify([...(s[g.key] || [])].sort())) && f.note === (s.note || "");
+  }
+
+  // ---- chips ----
+  const chipsEl = $("chips");
+  manifest.forEach((v, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = v.id.replace(/^v/, "");
+    b.title = v.id; b.addEventListener("click", () => go(i));
+    chipsEl.appendChild(b);
+  });
+  function renderChips(){
+    const only = $("onlyTodo").checked;
+    let done = 0;
+    [...chipsEl.children].forEach((b, i) => {
+      const isDone = !!labels[manifest[i].id];
+      if (isDone) done++;
+      b.classList.toggle("done", isDone);
+      b.classList.toggle("current", i === cur);
+      b.hidden = only && isDone && i !== cur;
+    });
+    $("doneCount").textContent = done;
+    $("barFill").style.width = (total ? (100 * done / total) : 0) + "%";
+    return done;
+  }
+
+  // ---- navigation ----
+  const player = $("player");
+  function go(i){
+    if (i < 0 || i >= total) return;
+    cur = i; skipArmed = false; setMsg("");
+    const v = manifest[i];
+    $("vidLabel").textContent = v.id;
+    $("pos").textContent = (i + 1) + " / " + total;
+    $("family").textContent = "运镜提示：" + (FAMILY[v.family] || v.family || "—");
+    $("prompt").textContent = v.prompt || "";
+    player.src = v.file;
+    player.playbackRate = rate;
+    const p = player.play(); if (p && p.catch) p.catch(() => {});
+    fillForm(labels[v.id]);
+    renderChips();
+    const chip = chipsEl.children[i]; if (chip && chip.scrollIntoView) chip.scrollIntoView({block:"nearest", inline:"nearest"});
+  }
+  function nextIndex(from){
+    const only = $("onlyTodo").checked;
+    for (let k = 1; k <= total; k++){
+      const j = (from + k) % total;
+      if (!only || !labels[manifest[j].id]) return j;
+    }
+    return -1;
+  }
+  player.addEventListener("loadedmetadata", () => { player.playbackRate = rate; });
+  $("tools").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.id === "replay"){ player.currentTime = 0; const p = player.play(); if (p && p.catch) p.catch(() => {}); return; }
+    rate = Number(b.dataset.rate) || 1; player.playbackRate = rate;
+    $("tools").querySelectorAll("button[data-rate]").forEach(x => x.classList.toggle("on", x === b));
+  });
+
+  function setMsg(text, kind){ const m = $("msg"); m.textContent = text; m.className = "msg" + (kind ? " " + kind : ""); }
+  function setStatus(state, text){ const s = $("status"); s.dataset.state = state; s.textContent = text; }
+  function persistLocal(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(labels)); } catch(e) {} }
+
+  // ---- save ----
+  $("sheet").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (saving) return;
+    const f = readForm();
+    let ok = true;
+    for (const g of GROUPS){
+      const miss = g.required && !f[g.key];
+      $("grp-" + g.key).classList.toggle("missing", !!miss);
+      if (miss) ok = false;
+    }
+    if (!ok){ setMsg("请先选 A（镜头运动）和 D（总体判断）。", "err"); return; }
+    const rater = $("rater").value.trim();
+    if (!serverOK && !rater){ setMsg("请先在页面顶部填上评分人（名字或缩写）。", "err"); $("rater").focus(); return; }
+    const v = manifest[cur];
+    const body = {vid: v.id, A: f.A, Ap: f.Ap, B: f.B, C: f.C, D: f.D, note: f.note, rater: rater, updatedAt: new Date().toISOString(), schema: "O31-v1"};
+    labels[v.id] = body; persistLocal(); renderChips();
+    if (serverOK){
+      saving = true; $("save").disabled = true; setMsg("保存中…");
+      try { await postVote(body); setMsg("已保存 " + v.id, "ok"); }
+      catch(err){
+        setMsg("写入 votes.json 失败，已先存在浏览器里。", "err");
+        setStatus("error", "保存出错：结果暂存在浏览器里，标完请点底部“复制全部结果”");
+        saving = false; $("save").disabled = false; return;
+      }
+      saving = false; $("save").disabled = false;
+    } else {
+      setMsg("已存在浏览器里 " + v.id, "ok");
+    }
+    const n = nextIndex(cur);
+    if (n === -1 || renderChips() === total && $("onlyTodo").checked){ setMsg("全部 " + total + " 段都标完了，谢谢！", "ok"); return; }
+    go(n);
+    setMsg("已保存 " + v.id, "ok");
+  });
+
+  $("prev").addEventListener("click", () => go((cur - 1 + total) % total));
+  $("skip").addEventListener("click", () => {
+    if (!sameAsSaved() && !skipArmed){ skipArmed = true; setMsg("这一段有没保存的改动，再点一次“下一段”会放弃这些改动。", "err"); return; }
+    const n = nextIndex(cur); go(n === -1 ? (cur + 1) % total : n);
+  });
+  $("onlyTodo").addEventListener("change", renderChips);
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){ e.preventDefault(); $("sheet").requestSubmit(); return; }
+    const t = e.target; if (t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" && t.type === "text")) return;
+    if (e.key === "ArrowRight"){ e.preventDefault(); $("skip").click(); }
+    if (e.key === "ArrowLeft"){ e.preventDefault(); $("prev").click(); }
+  });
+
+  // ---- copy all ----
+  $("copyAll").addEventListener("click", async () => {
+    const text = JSON.stringify({schema:"O31-v1", rater:$("rater").value.trim(), exportedAt:new Date().toISOString(), count:Object.keys(labels).length, labels}, null, 1);
+    const box = $("copyBox"); box.value = text; box.hidden = false;
+    try { await navigator.clipboard.writeText(text); setMsg("全部结果已复制到剪贴板。", "ok"); }
+    catch(e){ box.focus(); box.select(); setMsg("没能自动复制，已选中下面的文本，请手动复制。", "err"); }
+  });
+
+  // ---- start ----
+  const firstTodo = manifest.findIndex(v => !labels[v.id]);
+  go(firstTodo === -1 ? 0 : firstTodo);
+
+  // ---- connect the local save service (serve.py writes votes.json) ----
+  (async () => {
+    try {
+      const r = await fetch("/api/votes", {cache: "no-store"});
+      if (!r.ok) throw new Error("http " + r.status);
+      const remote = (await r.json()).labels || {};
+      for (const [id, rem] of Object.entries(remote)){
+        const loc = labels[id];
+        if (!loc || (rem.updatedAt || "") >= (loc.updatedAt || "")) labels[id] = rem;
+      }
+      for (const [id, loc] of Object.entries(labels)){
+        const rem = remote[id];
+        if (!rem || (loc.updatedAt || "") > (rem.updatedAt || "")){ try { await postVote(loc); } catch(e) {} }
+      }
+      serverOK = true;
+      persistLocal(); renderChips();
+      if (!document.activeElement || !document.activeElement.closest || !document.activeElement.closest("#sheet")) fillForm(labels[manifest[cur].id]);
+      setStatus("ok", "已连接：每次保存都写进本机文件 votes.json");
+      $("footNote").textContent = "每次保存都会写进本机文件 votes.json，Claude 可以直接读取，不需要另外发送。";
+    } catch(e){
+      serverOK = false;
+      setStatus("local", "结果保存在你的浏览器里，标完请复制结果发给 Chenrui");
+    }
+  })();
+})();
+</script>
+</body>
+</html>
