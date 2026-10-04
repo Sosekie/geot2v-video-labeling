@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: a clip-index rail on the left, the viewer and the label sheet on the right; on phones the rail becomes a scrolling strip above the viewer. */
+/* Layout: clip-index rail on the left; the viewer and three quick questions on the right. On phones the rail becomes a scrolling strip. */
 :root{
   --bg:#F2F4F1; --panel:#FFFFFF; --ink:#16201B; --muted:#56635C; --line:#D6DDD8;
   --accent:#0A7560; --accent-ink:#FFFFFF; --accent-soft:#DBEEE8;
@@ -34,17 +34,17 @@
   --chip:#1F2723; --screen:#050706; color-scheme:dark;
 }
 *{box-sizing:border-box}
+html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.55}
 .wrap{max-width:1360px;margin:0 auto;padding-inline:16px;padding-block:14px 28px;display:grid;gap:12px}
 button,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* Header */
-.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;border-bottom:1px solid var(--line)}
-.brand{display:grid;gap:0;min-width:0}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;border-bottom:1px solid var(--line)}
+.brand{display:grid;min-width:0}
 .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
 h1{font-family:var(--font-display);font-weight:600;font-size:26px;line-height:1.1;margin:0;letter-spacing:.01em;text-wrap:balance}
-.meter{display:grid;gap:4px;min-width:180px;flex:1 1 220px;max-width:360px}
+.meter{display:grid;gap:4px;min-width:160px;flex:1 1 200px;max-width:340px}
 .meter-text{font-variant-numeric:tabular-nums;color:var(--muted)}
 .meter-text b{color:var(--ink);font-family:var(--font-mono)}
 .bar{height:6px;border-radius:3px;background:var(--chip);overflow:hidden}
@@ -56,13 +56,11 @@ h1{font-family:var(--font-display);font-weight:600;font-size:26px;line-height:1.
 .status[data-state="local"]{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
 .status[data-state="error"]{color:var(--danger);border-color:var(--danger);background:var(--danger-soft)}
 
-/* Guide */
 .guide{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding-inline:14px;padding-block:8px}
 .guide summary{cursor:pointer;font-weight:600}
-.guide ul{margin:8px 0 4px;padding-left:20px;display:grid;gap:4px;max-width:78ch}
+.guide ul{margin:8px 0 4px;padding-left:20px;display:grid;gap:4px;max-width:80ch}
 kbd{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--chip)}
 
-/* Layout */
 .layout{display:grid;grid-template-columns:232px minmax(0,1fr);gap:16px;align-items:start}
 .rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 72px);display:grid;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px}
 .rail-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
@@ -71,7 +69,6 @@ kbd{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);bor
 .chip{font-family:var(--font-mono);font-size:12px;font-variant-numeric:tabular-nums;padding:5px 0;border-radius:5px;border:1px solid var(--line);background:transparent;cursor:pointer;color:var(--muted)}
 .chip.done{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
 .chip.current{outline:2px solid var(--ink);outline-offset:1px;color:var(--ink)}
-.chip[hidden]{display:none}
 
 .stage{display:grid;gap:14px;min-width:0}
 .viewer{display:grid;gap:8px;min-width:0}
@@ -79,34 +76,40 @@ kbd{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);bor
 .vid{font-family:var(--font-display);font-size:30px;font-weight:600;line-height:1}
 .family{font-size:13px;padding:2px 8px;border-radius:4px;background:var(--chip);color:var(--muted)}
 .pos{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-left:auto}
-.video-box{background:var(--screen);border-radius:var(--radius);overflow:hidden;aspect-ratio:16/9;max-width:100%;display:grid;place-items:center}
+.video-box{background:var(--screen);border-radius:var(--radius);overflow:hidden;aspect-ratio:53/30;max-width:100%;display:grid;place-items:center}
 .video-box video{width:100%;height:100%;object-fit:contain;display:block}
 .video-tools{display:flex;flex-wrap:wrap;gap:6px}
 .video-tools button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px}
 .video-tools button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
 .prompt{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;display:grid;gap:4px;min-width:0}
 .prompt .label{font-size:12px;color:var(--muted);letter-spacing:.04em}
-.prompt p{margin:0;max-height:7.6em;overflow:auto;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.prompt p{margin:0;max-height:5.4em;overflow:auto;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
 
-/* Label sheet */
-.sheet{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.grp{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:10px 12px 12px;margin:0;min-width:0;display:grid;gap:4px;align-content:start}
-.col{display:grid;gap:12px;align-content:start;min-width:0}
-.grp.wide{grid-column:1 / -1}
-.grp.missing{border-color:var(--danger);background:var(--danger-soft)}
+.sheet{display:grid;gap:12px}
+.qs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.q{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:10px 12px 12px;margin:0;min-width:0;display:grid;gap:6px;align-content:start}
+.q.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.q.missing{border-color:var(--danger);background:var(--danger-soft)}
 legend{font-weight:600;padding:0 4px;display:flex;align-items:baseline;gap:8px}
-legend em{font-style:normal;font-weight:400;font-size:12px;color:var(--muted)}
-.code{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:600}
-.opt{display:grid;grid-template-columns:auto 2.6em minmax(0,1fr);align-items:start;gap:6px;padding:4px 6px;border-radius:6px;cursor:pointer}
+legend .qn{font-family:var(--font-mono);font-size:12px;color:var(--accent)}
+.opt{display:grid;grid-template-columns:1.8em minmax(0,1fr);align-items:start;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid transparent}
 .opt:hover{background:var(--chip)}
-.opt input{margin:3px 0 0}
-.opt .oc{font-family:var(--font-mono);font-size:12px;color:var(--muted);padding-top:1px}
-.opt:has(input:checked){background:var(--accent-soft)}
-.opt:has(input:checked) .oc{color:var(--accent);font-weight:600}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt .key{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);border-radius:4px;text-align:center;line-height:1.6}
+.opt:has(input:checked){background:var(--accent-soft);border-color:var(--accent)}
+.opt:has(input:checked) .key{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.opt:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:1px}
+.more{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding-inline:12px;padding-block:8px}
+.more summary{cursor:pointer;font-weight:600}
+.more-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:8px}
+.mg{display:grid;gap:2px;align-content:start;min-width:0}
+.mg b{font-size:13px}
+.mg label{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:start;font-size:13px;padding:2px 0;cursor:pointer}
+.mg label input{margin:3px 0 0}
 .note{display:grid;gap:6px}
 .note label{font-weight:600}
-textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:8px;resize:vertical;min-height:3.2em}
-.actions{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;position:sticky;bottom:0;background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:8px;resize:vertical;min-height:2.6em}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;position:sticky;bottom:0;background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
 .actions .spacer{flex:1 1 auto;min-width:0}
 .msg{font-size:13px;color:var(--muted);min-width:0}
 .msg.err{color:var(--danger)}
@@ -114,18 +117,16 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:8px 14px;cursor:pointer}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
 .btn:disabled{opacity:.5;cursor:default}
-
 .foot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:12px}
 .foot textarea{font-family:var(--font-mono);font-size:11px;min-height:6em}
 
+@media (max-width: 1080px){ .qs, .more-grid{grid-template-columns:minmax(0,1fr)} }
 @media (max-width: 860px){
   .layout{grid-template-columns:minmax(0,1fr)}
   .rail{position:static}
   .chips{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:3.6em;overflow-x:auto;max-height:none;padding-bottom:6px}
-  .sheet{grid-template-columns:minmax(0,1fr)}
 }
 @media (prefers-reduced-motion: reduce){ .bar span{transition:none} }
-html,body{margin:0}
 </style>
 </head>
 <body>
@@ -144,13 +145,12 @@ html,body{margin:0}
   </header>
 
   <details class="guide" id="guide" open>
-    <summary>标注说明</summary>
+    <summary>怎么标（每段约 10–15 秒）</summary>
     <ul>
-      <li>每段视频下面有五组选项。<b>A 镜头运动</b>和 <b>D 总体判断</b>必选；其余按看到的勾选，没有就不勾。</li>
-      <li>判断镜头有没有真的移动，看近处和远处：真的在走动时，近处的东西比远处移动得快，前后遮挡关系会变化；原地转动或变焦时，整幅画面像一张图在平移或放大，前后关系不变。</li>
-      <li>拿不准就选“说不准”，比硬选一个更有用。</li>
-      <li>视频已随机打乱，页面上不显示模型名。标完的段可以随时回去修改，以最后一次保存为准。</li>
-      <li>快捷键：<kbd>←</kbd> <kbd>→</kbd> 切换视频；<kbd>Ctrl</kbd>+<kbd>Enter</kbd>（Mac 用 <kbd>⌘</kbd>+<kbd>Enter</kbd>）保存并进入下一段。</li>
+      <li>每段视频回答 3 道单选题。按数字键 <kbd>1</kbd>–<kbd>4</kbd> 作答，答完一题自动跳到下一题，3 题答完自动保存并进入下一段。也可以直接用鼠标点。</li>
+      <li>判断镜头有没有真的移动，看近处和远处：真的在走动时，近处的东西比远处移动得快，前后遮挡关系会变；原地转动或变焦时，整幅画面像一张图在平移或放大。</li>
+      <li>拿不准就选“说不准”。想补充的细节可以展开“更多细节（可选）”，不填也可以。</li>
+      <li>视频已随机打乱，页面上不显示模型名。标过的可以点左侧编号回去改，以最后一次保存为准。<kbd>←</kbd> <kbd>→</kbd> 切换视频。</li>
     </ul>
   </details>
 
@@ -185,8 +185,12 @@ html,body{margin:0}
       </section>
 
       <form class="sheet" id="sheet" novalidate>
-        <div id="groups" style="display:contents"></div>
-        <div class="grp wide note">
+        <div class="qs" id="qs"></div>
+        <details class="more" id="more">
+          <summary>更多细节（可选）</summary>
+          <div class="more-grid" id="moreGrid"></div>
+        </details>
+        <div class="note">
           <label for="note">备注（可选）</label>
           <textarea id="note" rows="2" placeholder="例如：第 3 秒左右桌子腿变成了三条"></textarea>
         </div>
@@ -921,56 +925,40 @@ html,body{margin:0}
 <script>
 (function(){
   "use strict";
-  const GROUPS = [
-    {key:"A", type:"radio", title:"镜头运动", hint:"单选，必填", required:true, opts:[
-      ["A1","画面完全静止，几乎是一张图"],
-      ["A2","镜头基本不动，只有画面里的东西在动"],
-      ["A3","镜头原地转（左右摇、上下抬低头、滚转），没有走动，看不出近处比远处动得快"],
-      ["A4","只有放大缩小（变焦感），视角没有变化"],
-      ["A5","镜头真的在移动（环绕、平移、前进后退），看得出视差：近处比远处动得快"],
-      ["A6","镜头运动混乱（抖动、来回、跳变）"],
-      ["A7","看不出或说不准"]]},
-    {key:"Ap", type:"check", title:"镜头补充", hint:"多选", opts:[
-      ["A8","运动方向和提示词不符"],
-      ["A9","运动幅度很小"],
-      ["A10","中途有剪辑或镜头切换"]]},
-    {key:"D", type:"radio", title:"总体判断", hint:"单选，必填", required:true, opts:[
-      ["D1","能当作一个静态三维场景的可靠拍摄"],
-      ["D2","大体可用，但有局部问题"],
-      ["D3","不适合用来评测静态三维"],
-      ["D4","说不准"]]},
-    {key:"B", type:"check", title:"内容的运动或变化", hint:"多选", opts:[
-      ["B1","有人、动物、车、水、火、风等在合理地运动"],
-      ["B2","物体整体在场景里移动或转动（刚体）"],
-      ["B3","物体非刚性变形（扭曲、流动、像橡皮泥）"],
-      ["B4","物体凭空出现或消失"],
-      ["B5","物体结构或数量前后不一致（比如腿的数目变了）"],
-      ["B6","背景或场景布局在变（墙、地面、远景变形）"],
-      ["B7","纹理、颜色或光照闪烁、渐变"],
-      ["B8","视角转过去再转回来，内容对不上"],
-      ["B9","没有明显的内容变化"]]},
-    {key:"C", type:"check", title:"画面与内容", hint:"多选", opts:[
-      ["C1","模糊或分辨率低"],
-      ["C2","明显伪影（噪点、马赛克、接缝）"],
-      ["C3","细节非常丰富（复杂纹理、很多小物体）"],
-      ["C4","画面很简单（大片纯色、几乎没有纹理）"],
-      ["C5","有反光、透明、玻璃、水面等难重建的材质"],
-      ["C6","有文字、水印或字幕"],
-      ["C7","内容与提示词不符"]]}
+  const QUESTIONS = [
+    {key:"q1", title:"镜头", opts:[
+      ["static","几乎不动（画面静止，或只有画面里的东西在动）"],
+      ["noparallax","原地转或变焦（近处和远处一起动）"],
+      ["parallax","真的在移动（近处比远处动得快）"],
+      ["unsure","说不准"]]},
+    {key:"q2", title:"场景", opts:[
+      ["none","没有东西变"],
+      ["plausible","有合理的运动（人、动物、水、火、风）"],
+      ["inconsistent","有不合理的变化（变形、凭空出现或消失、转回来对不上）"],
+      ["unsure","说不准"]]},
+    {key:"q3", title:"能当一个静态三维场景的拍摄吗", opts:[
+      ["yes","能"],
+      ["mostly","大体能，有局部问题"],
+      ["no","不能"],
+      ["unsure","说不准"]]}
+  ];
+  const MORE = [
+    {key:"cam", title:"镜头细节", opts:[["A8","运动方向和提示词不符"],["A9","运动幅度很小"],["A10","中途有剪辑或镜头切换"],["A6","镜头抖动、来回或跳变"]]},
+    {key:"content", title:"内容细节", opts:[["B2","物体整体移动或转动（刚体）"],["B3","物体非刚性变形"],["B4","物体凭空出现或消失"],["B5","结构或数量前后不一致"],["B6","背景或布局在变"],["B7","纹理、颜色或光照闪烁"],["B8","转过去再转回来对不上"]]},
+    {key:"image", title:"画面细节", opts:[["C1","模糊"],["C2","明显伪影"],["C3","细节非常丰富"],["C4","画面很简单，几乎没有纹理"],["C5","反光、透明、玻璃或水面"],["C6","文字、水印或字幕"],["C7","内容与提示词不符"]]}
   ];
   const FAMILY = {orbit:"环绕", dolly:"推拉", lateral:"平移", roll:"滚转", tilt:"俯仰", pan:"摇镜", other:"其他"};
-  const STORE_KEY = "o31-labels-v1", RATER_KEY = "o31-rater";
+  const STORE_KEY = "o31-labels-v2", RATER_KEY = "o31-rater";
+  const $ = id => document.getElementById(id);
 
   let manifest = [];
-  try { manifest = (JSON.parse(document.getElementById("manifest").textContent).videos || []).map(v => ({id:v.id, file:v.filename, prompt:v.prompt, family:v.motion_prompt_family})); } catch(e) { manifest = []; }
-  const $ = id => document.getElementById(id);
+  try { manifest = (JSON.parse($("manifest").textContent).videos || []).map(v => ({id:v.id, file:v.filename, prompt:v.prompt, family:v.motion_prompt_family})); } catch(e) { manifest = []; }
   const total = manifest.length;
   $("totalCount").textContent = total;
 
-  // ---- state ----
   let labels = {};
   try { const raw = localStorage.getItem(STORE_KEY); if (raw) labels = JSON.parse(raw) || {}; } catch(e) { labels = {}; }
-  let cur = 0, rate = 1, serverOK = false, skipArmed = false, saving = false;
+  let cur = 0, rate = 1, serverOK = false, skipArmed = false, saving = false, activeQ = 0;
   try { $("rater").value = localStorage.getItem(RATER_KEY) || ""; } catch(e) {}
   $("rater").addEventListener("change", () => { try { localStorage.setItem(RATER_KEY, $("rater").value.trim()); } catch(e) {} });
   async function postVote(rec){
@@ -979,63 +967,77 @@ html,body{margin:0}
     return r.json();
   }
 
-  // ---- build the form ----
-  const groupsEl = $("groups");
-  const colL = document.createElement("div"), colR = document.createElement("div");
-  colL.className = colR.className = "col";
-  groupsEl.append(colL, colR);
-  for (const g of GROUPS){
+  // ---- build questions ----
+  const qsEl = $("qs");
+  QUESTIONS.forEach((q, qi) => {
     const fs = document.createElement("fieldset");
-    fs.className = "grp"; fs.id = "grp-" + g.key;
+    fs.className = "q"; fs.id = "q-" + q.key;
     const lg = document.createElement("legend");
-    lg.innerHTML = '<span class="code"></span><span></span><em></em>';
-    lg.children[0].textContent = g.key === "Ap" ? "A+" : g.key;
-    lg.children[1].textContent = g.title;
-    lg.children[2].textContent = g.hint;
-    fs.appendChild(lg);
-    for (const [code, text] of g.opts){
-      const lab = document.createElement("label");
-      lab.className = "opt";
-      const inp = document.createElement("input");
-      inp.type = g.type === "radio" ? "radio" : "checkbox";
-      inp.name = g.key; inp.value = code; inp.id = "opt-" + code;
-      const oc = document.createElement("span"); oc.className = "oc"; oc.textContent = code;
+    const qn = document.createElement("span"); qn.className = "qn"; qn.textContent = "第 " + (qi + 1) + " 题";
+    const tt = document.createElement("span"); tt.textContent = q.title;
+    lg.append(qn, tt); fs.appendChild(lg);
+    q.opts.forEach(([val, text], oi) => {
+      const lab = document.createElement("label"); lab.className = "opt";
+      const inp = document.createElement("input"); inp.type = "radio"; inp.name = q.key; inp.value = val; inp.id = "opt-" + q.key + "-" + val;
+      const key = document.createElement("span"); key.className = "key"; key.textContent = String(oi + 1);
       const tx = document.createElement("span"); tx.textContent = text;
-      lab.append(inp, oc, tx);
+      lab.append(inp, key, tx);
+      inp.addEventListener("change", () => { setActive(Math.min(qi + 1, QUESTIONS.length - 1)); maybeAutoSave(qi); });
       fs.appendChild(lab);
-    }
-    (g.key === "B" || g.key === "C" ? colR : colL).appendChild(fs);
-  }
+    });
+    fs.addEventListener("click", () => setActive(qi));
+    qsEl.appendChild(fs);
+  });
+  const moreEl = $("moreGrid");
+  MORE.forEach(g => {
+    const box = document.createElement("div"); box.className = "mg";
+    const b = document.createElement("b"); b.textContent = g.title; box.appendChild(b);
+    g.opts.forEach(([code, text]) => {
+      const lab = document.createElement("label");
+      const inp = document.createElement("input"); inp.type = "checkbox"; inp.name = "more"; inp.value = code; inp.id = "more-" + code;
+      const tx = document.createElement("span"); tx.textContent = text;
+      lab.append(inp, tx); box.appendChild(lab);
+    });
+    moreEl.appendChild(box);
+  });
 
+  function setActive(i){ activeQ = i; QUESTIONS.forEach((q, qi) => $("q-" + q.key).classList.toggle("active", qi === i)); }
   function readForm(){
     const out = {};
-    for (const g of GROUPS){
-      const checked = [...document.querySelectorAll('input[name="' + g.key + '"]:checked')].map(i => i.value);
-      out[g.key] = g.type === "radio" ? (checked[0] || null) : checked;
-    }
+    QUESTIONS.forEach(q => { const c = document.querySelector('input[name="' + q.key + '"]:checked'); out[q.key] = c ? c.value : null; });
+    out.more = [...document.querySelectorAll('input[name="more"]:checked')].map(i => i.value);
     out.note = $("note").value.trim();
     return out;
   }
   function fillForm(rec){
-    for (const g of GROUPS){
-      const vals = rec ? (g.type === "radio" ? [rec[g.key]] : (rec[g.key] || [])) : [];
-      document.querySelectorAll('input[name="' + g.key + '"]').forEach(i => { i.checked = vals.includes(i.value); });
-      $("grp-" + g.key).classList.remove("missing");
-    }
+    QUESTIONS.forEach(q => {
+      document.querySelectorAll('input[name="' + q.key + '"]').forEach(i => { i.checked = !!rec && rec[q.key] === i.value; });
+      $("q-" + q.key).classList.remove("missing");
+    });
+    const more = rec && rec.more ? rec.more : [];
+    document.querySelectorAll('input[name="more"]').forEach(i => { i.checked = more.includes(i.value); });
     $("note").value = rec && rec.note ? rec.note : "";
+    if (more.length) $("more").open = true;
+    const firstEmpty = QUESTIONS.findIndex(q => !(rec && rec[q.key]));
+    setActive(firstEmpty === -1 ? 0 : firstEmpty);
   }
   function sameAsSaved(){
     const f = readForm(), s = labels[manifest[cur].id];
-    if (!s) return GROUPS.every(g => g.type === "radio" ? !f[g.key] : f[g.key].length === 0) && !f.note;
-    return GROUPS.every(g => g.type === "radio" ? f[g.key] === (s[g.key] || null) : JSON.stringify([...f[g.key]].sort()) === JSON.stringify([...(s[g.key] || [])].sort())) && f.note === (s.note || "");
+    if (!s) return QUESTIONS.every(q => !f[q.key]) && f.more.length === 0 && !f.note;
+    return QUESTIONS.every(q => f[q.key] === (s[q.key] || null)) && JSON.stringify([...f.more].sort()) === JSON.stringify([...(s.more || [])].sort()) && f.note === (s.note || "");
+  }
+  function maybeAutoSave(qi){
+    if (qi !== QUESTIONS.length - 1) return;
+    const f = readForm();
+    if (QUESTIONS.every(q => f[q.key]) && !$("more").open) $("sheet").requestSubmit();
   }
 
   // ---- chips ----
   const chipsEl = $("chips");
   manifest.forEach((v, i) => {
     const b = document.createElement("button");
-    b.type = "button"; b.className = "chip"; b.textContent = v.id.replace(/^v/, "");
-    b.title = v.id; b.addEventListener("click", () => go(i));
+    b.type = "button"; b.className = "chip"; b.textContent = v.id.replace(/^v/, ""); b.title = v.id;
+    b.addEventListener("click", () => go(i));
     chipsEl.appendChild(b);
   });
   function renderChips(){
@@ -1063,19 +1065,16 @@ html,body{margin:0}
     $("pos").textContent = (i + 1) + " / " + total;
     $("family").textContent = "运镜提示：" + (FAMILY[v.family] || v.family || "—");
     $("prompt").textContent = v.prompt || "";
-    player.src = v.file;
-    player.playbackRate = rate;
+    player.src = v.file; player.playbackRate = rate;
     const p = player.play(); if (p && p.catch) p.catch(() => {});
+    $("more").open = false;
     fillForm(labels[v.id]);
     renderChips();
     const chip = chipsEl.children[i]; if (chip && chip.scrollIntoView) chip.scrollIntoView({block:"nearest", inline:"nearest"});
   }
   function nextIndex(from){
     const only = $("onlyTodo").checked;
-    for (let k = 1; k <= total; k++){
-      const j = (from + k) % total;
-      if (!only || !labels[manifest[j].id]) return j;
-    }
+    for (let k = 1; k <= total; k++){ const j = (from + k) % total; if (!only || !labels[manifest[j].id]) return j; }
     return -1;
   }
   player.addEventListener("loadedmetadata", () => { player.playbackRate = rate; });
@@ -1096,31 +1095,25 @@ html,body{margin:0}
     if (saving) return;
     const f = readForm();
     let ok = true;
-    for (const g of GROUPS){
-      const miss = g.required && !f[g.key];
-      $("grp-" + g.key).classList.toggle("missing", !!miss);
-      if (miss) ok = false;
-    }
-    if (!ok){ setMsg("请先选 A（镜头运动）和 D（总体判断）。", "err"); return; }
+    QUESTIONS.forEach(q => { const miss = !f[q.key]; $("q-" + q.key).classList.toggle("missing", miss); if (miss) ok = false; });
+    if (!ok){ setMsg("3 道题都要选（拿不准就选“说不准”）。", "err"); return; }
     const rater = $("rater").value.trim();
     if (!serverOK && !rater){ setMsg("请先在页面顶部填上评分人（名字或缩写）。", "err"); $("rater").focus(); return; }
     const v = manifest[cur];
-    const body = {vid: v.id, A: f.A, Ap: f.Ap, B: f.B, C: f.C, D: f.D, note: f.note, rater: rater, updatedAt: new Date().toISOString(), schema: "O31-v1"};
+    const body = {vid: v.id, q1: f.q1, q2: f.q2, q3: f.q3, more: f.more, note: f.note, rater: rater, updatedAt: new Date().toISOString(), schema: "O31-v2"};
     labels[v.id] = body; persistLocal(); renderChips();
     if (serverOK){
-      saving = true; $("save").disabled = true; setMsg("保存中…");
-      try { await postVote(body); setMsg("已保存 " + v.id, "ok"); }
+      saving = true; $("save").disabled = true;
+      try { await postVote(body); }
       catch(err){
         setMsg("写入 votes.json 失败，已先存在浏览器里。", "err");
         setStatus("error", "保存出错：结果暂存在浏览器里，标完请点底部“复制全部结果”");
         saving = false; $("save").disabled = false; return;
       }
       saving = false; $("save").disabled = false;
-    } else {
-      setMsg("已存在浏览器里 " + v.id, "ok");
     }
     const n = nextIndex(cur);
-    if (n === -1 || renderChips() === total && $("onlyTodo").checked){ setMsg("全部 " + total + " 段都标完了，谢谢！", "ok"); return; }
+    if (n === -1){ setMsg("全部 " + total + " 段都标完了，谢谢！", "ok"); return; }
     go(n);
     setMsg("已保存 " + v.id, "ok");
   });
@@ -1133,36 +1126,44 @@ html,body{margin:0}
   $("onlyTodo").addEventListener("change", renderChips);
   document.addEventListener("keydown", e => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){ e.preventDefault(); $("sheet").requestSubmit(); return; }
-    const t = e.target; if (t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" && t.type === "text")) return;
+    const t = e.target;
+    if (t && (t.tagName === "TEXTAREA" || (t.tagName === "INPUT" && t.type === "text"))) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^[1-4]$/.test(e.key)){
+      e.preventDefault();
+      const q = QUESTIONS[activeQ];
+      const inp = document.querySelectorAll('input[name="' + q.key + '"]')[Number(e.key) - 1];
+      if (inp){ inp.checked = true; inp.dispatchEvent(new Event("change")); }
+      return;
+    }
     if (e.key === "ArrowRight"){ e.preventDefault(); $("skip").click(); }
     if (e.key === "ArrowLeft"){ e.preventDefault(); $("prev").click(); }
   });
 
-  // ---- copy all ----
   $("copyAll").addEventListener("click", async () => {
-    const text = JSON.stringify({schema:"O31-v1", rater:$("rater").value.trim(), exportedAt:new Date().toISOString(), count:Object.keys(labels).length, labels}, null, 1);
+    const text = JSON.stringify({schema:"O31-v2", rater:$("rater").value.trim(), exportedAt:new Date().toISOString(), count:Object.keys(labels).length, labels}, null, 1);
     const box = $("copyBox"); box.value = text; box.hidden = false;
     try { await navigator.clipboard.writeText(text); setMsg("全部结果已复制到剪贴板。", "ok"); }
     catch(e){ box.focus(); box.select(); setMsg("没能自动复制，已选中下面的文本，请手动复制。", "err"); }
   });
 
-  // ---- start ----
   const firstTodo = manifest.findIndex(v => !labels[v.id]);
   go(firstTodo === -1 ? 0 : firstTodo);
 
-  // ---- connect the local save service (serve.py writes votes.json) ----
+  // ---- local save service (serve.py on the author's computer); the public site has none ----
   (async () => {
     try {
       const r = await fetch("/api/votes", {cache: "no-store"});
       if (!r.ok) throw new Error("http " + r.status);
       const remote = (await r.json()).labels || {};
       for (const [id, rem] of Object.entries(remote)){
+        if (!rem || rem.schema !== "O31-v2") continue;
         const loc = labels[id];
         if (!loc || (rem.updatedAt || "") >= (loc.updatedAt || "")) labels[id] = rem;
       }
       for (const [id, loc] of Object.entries(labels)){
         const rem = remote[id];
-        if (!rem || (loc.updatedAt || "") > (rem.updatedAt || "")){ try { await postVote(loc); } catch(e) {} }
+        if (!rem || rem.schema !== "O31-v2" || (loc.updatedAt || "") > (rem.updatedAt || "")){ try { await postVote(loc); } catch(e) {} }
       }
       serverOK = true;
       persistLocal(); renderChips();
