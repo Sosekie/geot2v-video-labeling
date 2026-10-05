@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>生成视频标注台</title>
+<title>生成视频标注台 · Generated-Video Labeling</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -50,7 +50,8 @@ h1{font-family:var(--font-display);font-weight:600;font-size:26px;line-height:1.
 .bar{height:6px;border-radius:3px;background:var(--chip);overflow:hidden}
 .bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .25s ease}
 .rater{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
-.rater input{width:9em;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:4px 8px}
+.rater input{width:10em;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:4px 8px}
+.lang{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px}
 .status{font-size:13px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);max-width:100%}
 .status[data-state="ok"]{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 .status[data-state="local"]{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
@@ -133,53 +134,54 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <span class="eyebrow">GeoT2V · O31 标注试点</span>
-      <h1>生成视频标注台</h1>
+      <span class="eyebrow" data-i18n="eyebrow"></span>
+      <h1 data-i18n="title"></h1>
     </div>
     <div class="meter" aria-live="polite">
-      <div class="meter-text">已标 <b id="doneCount">0</b> / <span id="totalCount">78</span> 段</div>
+      <div class="meter-text" id="meterText"></div>
       <div class="bar"><span id="barFill"></span></div>
     </div>
-    <label class="rater" for="rater">评分人 <input id="rater" type="text" placeholder="你的名字或缩写" autocomplete="name"></label>
-    <div class="status" id="status" data-state="pending">正在检查保存方式…</div>
+    <label class="rater" for="rater"><span data-i18n="rater"></span> <input id="rater" type="text" autocomplete="name"></label>
+    <button type="button" class="lang" id="langBtn"></button>
+    <div class="status" id="status" data-state="pending"></div>
   </header>
 
   <details class="guide" id="guide" open>
-    <summary>怎么标（每段约 10–15 秒）</summary>
+    <summary data-i18n="guideTitle"></summary>
     <ul>
-      <li>每段视频回答 3 道单选题。按数字键 <kbd>1</kbd>–<kbd>4</kbd> 作答，答完一题自动跳到下一题，3 题答完自动保存并进入下一段。也可以直接用鼠标点。</li>
-      <li>判断镜头有没有真的移动，看近处和远处：真的在走动时，近处的东西比远处移动得快，前后遮挡关系会变；原地转动或变焦时，整幅画面像一张图在平移或放大。</li>
-      <li>拿不准就选“说不准”。想补充的细节可以展开“更多细节（可选）”，不填也可以。</li>
-      <li>视频已随机打乱，页面上不显示模型名。标过的可以点左侧编号回去改，以最后一次保存为准。<kbd>←</kbd> <kbd>→</kbd> 切换视频。</li>
+      <li data-i18n-html="guide1"></li>
+      <li data-i18n="guide2"></li>
+      <li data-i18n="guide3"></li>
+      <li data-i18n-html="guide4"></li>
     </ul>
   </details>
 
   <div class="layout">
-    <aside class="rail" aria-label="视频列表">
+    <aside class="rail" id="rail">
       <div class="rail-head">
-        <span>视频列表</span>
-        <label class="toggle"><input type="checkbox" id="onlyTodo"> 只看未标</label>
+        <span data-i18n="clips"></span>
+        <label class="toggle"><input type="checkbox" id="onlyTodo"> <span data-i18n="onlyTodo"></span></label>
       </div>
       <div class="chips" id="chips"></div>
     </aside>
 
     <main class="stage">
-      <section class="viewer" aria-label="当前视频">
+      <section class="viewer" id="viewer">
         <div class="viewer-head">
           <span class="vid" id="vidLabel">v001</span>
-          <span class="family" id="family">运镜提示：—</span>
+          <span class="family" id="family"></span>
           <span class="pos" id="pos">1 / 78</span>
         </div>
         <div class="video-box">
           <video id="player" muted loop playsinline autoplay controls preload="auto"></video>
         </div>
         <div class="video-tools" id="tools">
-          <button type="button" data-rate="0.5">0.5× 慢放</button>
-          <button type="button" data-rate="1" class="on">1× 原速</button>
-          <button type="button" id="replay">从头播放</button>
+          <button type="button" data-rate="0.5" data-i18n="slow"></button>
+          <button type="button" data-rate="1" class="on" data-i18n="normal"></button>
+          <button type="button" id="replay" data-i18n="replay"></button>
         </div>
         <div class="prompt">
-          <span class="label">提示词</span>
+          <span class="label" data-i18n="promptLabel"></span>
           <p id="prompt"></p>
         </div>
       </section>
@@ -187,28 +189,28 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
       <form class="sheet" id="sheet" novalidate>
         <div class="qs" id="qs"></div>
         <details class="more" id="more">
-          <summary>更多细节（可选）</summary>
+          <summary data-i18n="moreTitle"></summary>
           <div class="more-grid" id="moreGrid"></div>
         </details>
         <div class="note">
-          <label for="note">备注（可选）</label>
-          <textarea id="note" rows="2" placeholder="例如：第 3 秒左右桌子腿变成了三条"></textarea>
+          <label for="note" data-i18n="noteLabel"></label>
+          <textarea id="note" rows="2"></textarea>
         </div>
         <div class="actions">
-          <button type="button" class="btn" id="prev">上一段</button>
+          <button type="button" class="btn" id="prev" data-i18n="prev"></button>
           <span class="msg" id="msg"></span>
           <span class="spacer"></span>
-          <button type="button" class="btn" id="skip">下一段</button>
-          <button type="submit" class="btn primary" id="save">保存并下一段</button>
+          <button type="button" class="btn" id="skip" data-i18n="next"></button>
+          <button type="submit" class="btn primary" id="save" data-i18n="save"></button>
         </div>
       </form>
     </main>
   </div>
 
   <footer class="foot">
-    <span id="footNote">结果保存在你的浏览器里。全部标完后，点右边的按钮复制结果，把复制的内容发给 Chenrui。</span>
-    <button type="button" class="btn" id="copyAll">复制全部结果（JSON）</button>
-    <textarea id="copyBox" hidden readonly aria-label="全部结果"></textarea>
+    <span id="footNote"></span>
+    <button type="button" class="btn" id="copyAll" data-i18n="copyAll"></button>
+    <textarea id="copyBox" hidden readonly></textarea>
   </footer>
 </div>
 
@@ -925,40 +927,102 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
 <script>
 (function(){
   "use strict";
+  const T = {
+    zh: {
+      eyebrow:"GeoT2V · O31 标注试点", title:"生成视频标注台", rater:"评分人", raterPh:"你的名字或缩写", langBtn:"English",
+      meter:"已标 {done} / {total} 段",
+      guideTitle:"怎么标（每段约 10–15 秒）",
+      guide1:"每段视频回答 3 道单选题。按数字键 <kbd>1</kbd>–<kbd>4</kbd> 作答，答完一题自动跳到下一题，3 题答完自动保存并进入下一段。也可以直接用鼠标点。",
+      guide2:"判断镜头有没有真的移动，看近处和远处：真的在走动时，近处的东西比远处移动得快，前后遮挡关系会变；原地转动或变焦时，整幅画面像一张图在平移或放大。",
+      guide3:"拿不准就选“说不准”。想补充的细节可以展开“更多细节（可选）”，不填也可以。",
+      guide4:"视频已随机打乱，页面上不显示模型名。标过的可以点左侧编号回去改，以最后一次保存为准。<kbd>←</kbd> <kbd>→</kbd> 切换视频。",
+      clips:"视频列表", onlyTodo:"只看未标", familyPrefix:"运镜提示：",
+      slow:"0.5× 慢放", normal:"1× 原速", replay:"从头播放", promptLabel:"提示词（原文）",
+      qn:"第 {n} 题", moreTitle:"更多细节（可选）", noteLabel:"备注（可选）", notePh:"例如：第 3 秒左右桌子腿变成了三条",
+      prev:"上一段", next:"下一段", save:"保存并下一段", copyAll:"复制全部结果（JSON）",
+      needAll:"3 道题都要选（拿不准就选“说不准”）。", needRater:"请先在页面顶部填上评分人（名字或缩写）。",
+      saved:"已保存 {id}", allDone:"全部 {total} 段都标完了，谢谢！", unsaved:"这一段有没保存的改动，再点一次“下一段”会放弃这些改动。",
+      saveFail:"写入 votes.json 失败，已先存在浏览器里。", copied:"全部结果已复制到剪贴板。", copyFail:"没能自动复制，已选中下面的文本，请手动复制。",
+      stPending:"正在检查保存方式…", stOk:"已连接：每次保存都写进本机文件 votes.json", stLocal:"结果保存在你的浏览器里，标完请复制结果发给 Chenrui", stError:"保存出错：结果暂存在浏览器里，标完请点底部“复制全部结果”",
+      footLocal:"每次保存都会写进本机文件 votes.json，Claude 可以直接读取，不需要另外发送。", footPublic:"结果保存在你的浏览器里。全部标完后，点右边的按钮复制结果，把复制的内容发给 Chenrui。",
+      fam:{orbit:"环绕", dolly:"推拉", lateral:"平移", roll:"滚转", tilt:"俯仰", pan:"摇镜", other:"其他"}
+    },
+    en: {
+      eyebrow:"GeoT2V · O31 labeling pilot", title:"Generated-Video Labeling", rater:"Rater", raterPh:"Your name or initials", langBtn:"中文",
+      meter:"Labeled {done} / {total}",
+      guideTitle:"How to label (about 10–15 s per clip)",
+      guide1:"Answer three single-choice questions per clip. Press <kbd>1</kbd>–<kbd>4</kbd> to answer; the next question becomes active, and after the third answer the clip is saved and the next one opens. Clicking works too.",
+      guide2:"To tell whether the camera really moves, compare near and far things: when the camera travels, near objects move faster than far ones and occlusions change; when it only turns in place or zooms, the whole picture slides or scales like a flat image.",
+      guide3:"If unsure, choose “Not sure”. Extra details are optional under “More details”.",
+      guide4:"Clips are shuffled and the page never shows which model made them. Click a number on the left to revisit a clip; the last save counts. <kbd>←</kbd> <kbd>→</kbd> switch clips.",
+      clips:"Clips", onlyTodo:"Unlabeled only", familyPrefix:"Camera prompt: ",
+      slow:"0.5× slow", normal:"1× normal", replay:"Restart", promptLabel:"Prompt (original)",
+      qn:"Q{n}", moreTitle:"More details (optional)", noteLabel:"Note (optional)", notePh:"e.g. around 3 s the table suddenly has three legs",
+      prev:"Previous", next:"Next", save:"Save and next", copyAll:"Copy all results (JSON)",
+      needAll:"Answer all three questions (choose “Not sure” if unsure).", needRater:"Please enter your name or initials at the top first.",
+      saved:"Saved {id}", allDone:"All {total} clips are labeled. Thank you!", unsaved:"This clip has unsaved changes. Click “Next” again to discard them.",
+      saveFail:"Could not write votes.json; saved in this browser for now.", copied:"All results copied to the clipboard.", copyFail:"Could not copy automatically. The text below is selected; please copy it.",
+      stPending:"Checking where results are saved…", stOk:"Connected: every save goes to votes.json on this computer", stLocal:"Results stay in your browser; when done, copy them and send them to Chenrui", stError:"Save error: results are kept in this browser; use “Copy all results” at the bottom",
+      footLocal:"Every save is written to votes.json on this computer; nothing needs to be sent.", footPublic:"Results are kept in your browser. When you are done, click the button on the right to copy them, then send the copied text to Chenrui.",
+      fam:{orbit:"orbit", dolly:"dolly", lateral:"lateral", roll:"roll", tilt:"tilt", pan:"pan", other:"other"}
+    }
+  };
   const QUESTIONS = [
-    {key:"q1", title:"镜头", opts:[
-      ["static","几乎不动（画面静止，或只有画面里的东西在动）"],
-      ["noparallax","原地转或变焦（近处和远处一起动）"],
-      ["parallax","真的在移动（近处比远处动得快）"],
-      ["unsure","说不准"]]},
-    {key:"q2", title:"场景", opts:[
-      ["none","没有东西变"],
-      ["plausible","有合理的运动（人、动物、水、火、风）"],
-      ["inconsistent","有不合理的变化（变形、凭空出现或消失、转回来对不上）"],
-      ["unsure","说不准"]]},
-    {key:"q3", title:"能当一个静态三维场景的拍摄吗", opts:[
-      ["yes","能"],
-      ["mostly","大体能，有局部问题"],
-      ["no","不能"],
-      ["unsure","说不准"]]}
+    {key:"q1", title:{zh:"镜头", en:"Camera"}, opts:[
+      ["static", {zh:"几乎不动（画面静止，或只有画面里的东西在动）", en:"Barely moves (a still image, or only things in the scene move)"}],
+      ["noparallax", {zh:"原地转或变焦（近处和远处一起动）", en:"Turns in place or zooms (near and far move together)"}],
+      ["parallax", {zh:"真的在移动（近处比远处动得快）", en:"Really travels (near things move faster than far ones)"}],
+      ["unsure", {zh:"说不准", en:"Not sure"}]]},
+    {key:"q2", title:{zh:"场景", en:"Scene"}, opts:[
+      ["none", {zh:"没有东西变", en:"Nothing changes"}],
+      ["plausible", {zh:"有合理的运动（人、动物、水、火、风）", en:"Plausible motion (people, animals, water, fire, wind)"}],
+      ["inconsistent", {zh:"有不合理的变化（变形、凭空出现或消失、转回来对不上）", en:"Implausible change (deforms, appears or vanishes, differs when the view returns)"}],
+      ["unsure", {zh:"说不准", en:"Not sure"}]]},
+    {key:"q3", title:{zh:"能当一个静态三维场景的拍摄吗", en:"Could this serve as a capture of one static 3D scene?"}, opts:[
+      ["yes", {zh:"能", en:"Yes"}],
+      ["mostly", {zh:"大体能，有局部问题", en:"Mostly, with local problems"}],
+      ["no", {zh:"不能", en:"No"}],
+      ["unsure", {zh:"说不准", en:"Not sure"}]]}
   ];
   const MORE = [
-    {key:"cam", title:"镜头细节", opts:[["A8","运动方向和提示词不符"],["A9","运动幅度很小"],["A10","中途有剪辑或镜头切换"],["A6","镜头抖动、来回或跳变"]]},
-    {key:"content", title:"内容细节", opts:[["B2","物体整体移动或转动（刚体）"],["B3","物体非刚性变形"],["B4","物体凭空出现或消失"],["B5","结构或数量前后不一致"],["B6","背景或布局在变"],["B7","纹理、颜色或光照闪烁"],["B8","转过去再转回来对不上"]]},
-    {key:"image", title:"画面细节", opts:[["C1","模糊"],["C2","明显伪影"],["C3","细节非常丰富"],["C4","画面很简单，几乎没有纹理"],["C5","反光、透明、玻璃或水面"],["C6","文字、水印或字幕"],["C7","内容与提示词不符"]]}
+    {title:{zh:"镜头细节", en:"Camera details"}, opts:[
+      ["A8", {zh:"运动方向和提示词不符", en:"Motion direction differs from the prompt"}],
+      ["A9", {zh:"运动幅度很小", en:"Very small motion"}],
+      ["A10", {zh:"中途有剪辑或镜头切换", en:"Cut or shot change"}],
+      ["A6", {zh:"镜头抖动、来回或跳变", en:"Shaky, back-and-forth or jumpy camera"}]]},
+    {title:{zh:"内容细节", en:"Content details"}, opts:[
+      ["B2", {zh:"物体整体移动或转动（刚体）", en:"An object moves or turns as a whole (rigid)"}],
+      ["B3", {zh:"物体非刚性变形", en:"Non-rigid deformation"}],
+      ["B4", {zh:"物体凭空出现或消失", en:"Objects appear or vanish"}],
+      ["B5", {zh:"结构或数量前后不一致", en:"Structure or count changes"}],
+      ["B6", {zh:"背景或布局在变", en:"Background or layout changes"}],
+      ["B7", {zh:"纹理、颜色或光照闪烁", en:"Texture, color or lighting flickers"}],
+      ["B8", {zh:"转过去再转回来对不上", en:"Content differs when the view returns"}]]},
+    {title:{zh:"画面细节", en:"Image details"}, opts:[
+      ["C1", {zh:"模糊", en:"Blurry"}],
+      ["C2", {zh:"明显伪影", en:"Visible artifacts"}],
+      ["C3", {zh:"细节非常丰富", en:"Very rich detail"}],
+      ["C4", {zh:"画面很简单，几乎没有纹理", en:"Very plain, almost no texture"}],
+      ["C5", {zh:"反光、透明、玻璃或水面", en:"Reflections, transparency, glass or water"}],
+      ["C6", {zh:"文字、水印或字幕", en:"Text, watermark or captions"}],
+      ["C7", {zh:"内容与提示词不符", en:"Content does not match the prompt"}]]}
   ];
-  const FAMILY = {orbit:"环绕", dolly:"推拉", lateral:"平移", roll:"滚转", tilt:"俯仰", pan:"摇镜", other:"其他"};
-  const STORE_KEY = "o31-labels-v2", RATER_KEY = "o31-rater";
+  const STORE_KEY = "o31-labels-v2", RATER_KEY = "o31-rater", LANG_KEY = "o31-lang";
   const $ = id => document.getElementById(id);
+
+  let lang = "zh";
+  try { lang = localStorage.getItem(LANG_KEY) || ((navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en"); } catch(e) {}
+  if (!T[lang]) lang = "zh";
+  const t = (key, vars) => { let s = (T[lang] && T[lang][key]) || T.zh[key] || key; if (vars) for (const k in vars) s = s.replace("{" + k + "}", vars[k]); return s; };
 
   let manifest = [];
   try { manifest = (JSON.parse($("manifest").textContent).videos || []).map(v => ({id:v.id, file:v.filename, prompt:v.prompt, family:v.motion_prompt_family})); } catch(e) { manifest = []; }
   const total = manifest.length;
-  $("totalCount").textContent = total;
 
   let labels = {};
   try { const raw = localStorage.getItem(STORE_KEY); if (raw) labels = JSON.parse(raw) || {}; } catch(e) { labels = {}; }
   let cur = 0, rate = 1, serverOK = false, skipArmed = false, saving = false, activeQ = 0;
+  let statusKey = "stPending", statusState = "pending", footKey = "footPublic", msgState = {key:"", vars:null, kind:""};
   try { $("rater").value = localStorage.getItem(RATER_KEY) || ""; } catch(e) {}
   $("rater").addEventListener("change", () => { try { localStorage.setItem(RATER_KEY, $("rater").value.trim()); } catch(e) {} });
   async function postVote(rec){
@@ -968,19 +1032,22 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
   }
 
   // ---- build questions ----
+  const textRefs = [];
   const qsEl = $("qs");
   QUESTIONS.forEach((q, qi) => {
     const fs = document.createElement("fieldset");
     fs.className = "q"; fs.id = "q-" + q.key;
     const lg = document.createElement("legend");
-    const qn = document.createElement("span"); qn.className = "qn"; qn.textContent = "第 " + (qi + 1) + " 题";
-    const tt = document.createElement("span"); tt.textContent = q.title;
+    const qn = document.createElement("span"); qn.className = "qn";
+    const tt = document.createElement("span");
+    textRefs.push(() => { qn.textContent = t("qn", {n: qi + 1}); tt.textContent = q.title[lang]; });
     lg.append(qn, tt); fs.appendChild(lg);
     q.opts.forEach(([val, text], oi) => {
       const lab = document.createElement("label"); lab.className = "opt";
       const inp = document.createElement("input"); inp.type = "radio"; inp.name = q.key; inp.value = val; inp.id = "opt-" + q.key + "-" + val;
       const key = document.createElement("span"); key.className = "key"; key.textContent = String(oi + 1);
-      const tx = document.createElement("span"); tx.textContent = text;
+      const tx = document.createElement("span");
+      textRefs.push(() => { tx.textContent = text[lang]; });
       lab.append(inp, key, tx);
       inp.addEventListener("change", () => { setActive(Math.min(qi + 1, QUESTIONS.length - 1)); maybeAutoSave(qi); });
       fs.appendChild(lab);
@@ -991,15 +1058,35 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
   const moreEl = $("moreGrid");
   MORE.forEach(g => {
     const box = document.createElement("div"); box.className = "mg";
-    const b = document.createElement("b"); b.textContent = g.title; box.appendChild(b);
+    const b = document.createElement("b"); box.appendChild(b);
+    textRefs.push(() => { b.textContent = g.title[lang]; });
     g.opts.forEach(([code, text]) => {
       const lab = document.createElement("label");
       const inp = document.createElement("input"); inp.type = "checkbox"; inp.name = "more"; inp.value = code; inp.id = "more-" + code;
-      const tx = document.createElement("span"); tx.textContent = text;
+      const tx = document.createElement("span");
+      textRefs.push(() => { tx.textContent = text[lang]; });
       lab.append(inp, tx); box.appendChild(lab);
     });
     moreEl.appendChild(box);
   });
+
+  function applyLang(){
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+    $("rater").placeholder = t("raterPh");
+    $("note").placeholder = t("notePh");
+    $("langBtn").textContent = t("langBtn");
+    $("rail").setAttribute("aria-label", t("clips"));
+    $("copyBox").setAttribute("aria-label", t("copyAll"));
+    textRefs.forEach(fn => fn());
+    $("status").textContent = t(statusKey);
+    $("footNote").textContent = t(footKey);
+    if (msgState.key) setMsg(msgState.key, msgState.vars, msgState.kind);
+    renderChips();
+    if (manifest[cur]){ const f = manifest[cur].family; $("family").textContent = t("familyPrefix") + ((T[lang].fam || {})[f] || f || "—"); }
+  }
+  $("langBtn").addEventListener("click", () => { lang = lang === "zh" ? "en" : "zh"; try { localStorage.setItem(LANG_KEY, lang); } catch(e) {} applyLang(); });
 
   function setActive(i){ activeQ = i; QUESTIONS.forEach((q, qi) => $("q-" + q.key).classList.toggle("active", qi === i)); }
   function readForm(){
@@ -1050,7 +1137,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
       b.classList.toggle("current", i === cur);
       b.hidden = only && isDone && i !== cur;
     });
-    $("doneCount").textContent = done;
+    $("meterText").textContent = t("meter", {done: done, total: total});
     $("barFill").style.width = (total ? (100 * done / total) : 0) + "%";
     return done;
   }
@@ -1063,7 +1150,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
     const v = manifest[i];
     $("vidLabel").textContent = v.id;
     $("pos").textContent = (i + 1) + " / " + total;
-    $("family").textContent = "运镜提示：" + (FAMILY[v.family] || v.family || "—");
+    $("family").textContent = t("familyPrefix") + ((T[lang].fam || {})[v.family] || v.family || "—");
     $("prompt").textContent = v.prompt || "";
     player.src = v.file; player.playbackRate = rate;
     const p = player.play(); if (p && p.catch) p.catch(() => {});
@@ -1085,8 +1172,11 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
     $("tools").querySelectorAll("button[data-rate]").forEach(x => x.classList.toggle("on", x === b));
   });
 
-  function setMsg(text, kind){ const m = $("msg"); m.textContent = text; m.className = "msg" + (kind ? " " + kind : ""); }
-  function setStatus(state, text){ const s = $("status"); s.dataset.state = state; s.textContent = text; }
+  function setMsg(key, vars, kind){
+    msgState = {key: key || "", vars: vars || null, kind: kind || ""};
+    const m = $("msg"); m.textContent = key ? t(key, vars) : ""; m.className = "msg" + (kind ? " " + kind : "");
+  }
+  function setStatus(state, key){ statusState = state; statusKey = key; const s = $("status"); s.dataset.state = state; s.textContent = t(key); }
   function persistLocal(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(labels)); } catch(e) {} }
 
   // ---- save ----
@@ -1096,38 +1186,34 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
     const f = readForm();
     let ok = true;
     QUESTIONS.forEach(q => { const miss = !f[q.key]; $("q-" + q.key).classList.toggle("missing", miss); if (miss) ok = false; });
-    if (!ok){ setMsg("3 道题都要选（拿不准就选“说不准”）。", "err"); return; }
+    if (!ok){ setMsg("needAll", null, "err"); return; }
     const rater = $("rater").value.trim();
-    if (!serverOK && !rater){ setMsg("请先在页面顶部填上评分人（名字或缩写）。", "err"); $("rater").focus(); return; }
+    if (!serverOK && !rater){ setMsg("needRater", null, "err"); $("rater").focus(); return; }
     const v = manifest[cur];
-    const body = {vid: v.id, q1: f.q1, q2: f.q2, q3: f.q3, more: f.more, note: f.note, rater: rater, updatedAt: new Date().toISOString(), schema: "O31-v2"};
+    const body = {vid: v.id, q1: f.q1, q2: f.q2, q3: f.q3, more: f.more, note: f.note, rater: rater, lang: lang, updatedAt: new Date().toISOString(), schema: "O31-v2"};
     labels[v.id] = body; persistLocal(); renderChips();
     if (serverOK){
       saving = true; $("save").disabled = true;
       try { await postVote(body); }
-      catch(err){
-        setMsg("写入 votes.json 失败，已先存在浏览器里。", "err");
-        setStatus("error", "保存出错：结果暂存在浏览器里，标完请点底部“复制全部结果”");
-        saving = false; $("save").disabled = false; return;
-      }
+      catch(err){ setMsg("saveFail", null, "err"); setStatus("error", "stError"); saving = false; $("save").disabled = false; return; }
       saving = false; $("save").disabled = false;
     }
     const n = nextIndex(cur);
-    if (n === -1){ setMsg("全部 " + total + " 段都标完了，谢谢！", "ok"); return; }
+    if (n === -1){ setMsg("allDone", {total: total}, "ok"); return; }
     go(n);
-    setMsg("已保存 " + v.id, "ok");
+    setMsg("saved", {id: v.id}, "ok");
   });
 
   $("prev").addEventListener("click", () => go((cur - 1 + total) % total));
   $("skip").addEventListener("click", () => {
-    if (!sameAsSaved() && !skipArmed){ skipArmed = true; setMsg("这一段有没保存的改动，再点一次“下一段”会放弃这些改动。", "err"); return; }
+    if (!sameAsSaved() && !skipArmed){ skipArmed = true; setMsg("unsaved", null, "err"); return; }
     const n = nextIndex(cur); go(n === -1 ? (cur + 1) % total : n);
   });
   $("onlyTodo").addEventListener("change", renderChips);
   document.addEventListener("keydown", e => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){ e.preventDefault(); $("sheet").requestSubmit(); return; }
-    const t = e.target;
-    if (t && (t.tagName === "TEXTAREA" || (t.tagName === "INPUT" && t.type === "text"))) return;
+    const el = e.target;
+    if (el && (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && el.type === "text"))) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (/^[1-4]$/.test(e.key)){
       e.preventDefault();
@@ -1143,10 +1229,11 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
   $("copyAll").addEventListener("click", async () => {
     const text = JSON.stringify({schema:"O31-v2", rater:$("rater").value.trim(), exportedAt:new Date().toISOString(), count:Object.keys(labels).length, labels}, null, 1);
     const box = $("copyBox"); box.value = text; box.hidden = false;
-    try { await navigator.clipboard.writeText(text); setMsg("全部结果已复制到剪贴板。", "ok"); }
-    catch(e){ box.focus(); box.select(); setMsg("没能自动复制，已选中下面的文本，请手动复制。", "err"); }
+    try { await navigator.clipboard.writeText(text); setMsg("copied", null, "ok"); }
+    catch(e){ box.focus(); box.select(); setMsg("copyFail", null, "err"); }
   });
 
+  applyLang();
   const firstTodo = manifest.findIndex(v => !labels[v.id]);
   go(firstTodo === -1 ? 0 : firstTodo);
 
@@ -1168,11 +1255,10 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
       serverOK = true;
       persistLocal(); renderChips();
       if (!document.activeElement || !document.activeElement.closest || !document.activeElement.closest("#sheet")) fillForm(labels[manifest[cur].id]);
-      setStatus("ok", "已连接：每次保存都写进本机文件 votes.json");
-      $("footNote").textContent = "每次保存都会写进本机文件 votes.json，Claude 可以直接读取，不需要另外发送。";
+      setStatus("ok", "stOk"); footKey = "footLocal"; $("footNote").textContent = t(footKey);
     } catch(e){
       serverOK = false;
-      setStatus("local", "结果保存在你的浏览器里，标完请复制结果发给 Chenrui");
+      setStatus("local", "stLocal"); footKey = "footPublic"; $("footNote").textContent = t(footKey);
     }
   })();
 })();
