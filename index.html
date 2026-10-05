@@ -8,12 +8,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: clip-index rail on the left; the viewer and three quick questions on the right. On phones the rail becomes a scrolling strip. */
+/* Layout: on screens at least 1100x600 the whole tool fits one screen (clip rail | viewer | question panel) and only inner panels scroll.
+   Smaller screens fall back to a stacked page that scrolls. */
 :root{
   --bg:#F2F4F1; --panel:#FFFFFF; --ink:#16201B; --muted:#56635C; --line:#D6DDD8;
   --accent:#0A7560; --accent-ink:#FFFFFF; --accent-soft:#DBEEE8;
   --warn:#8F5B00; --warn-soft:#FAEFD8; --danger:#B42318; --danger-soft:#FBE4E1;
-  --chip:#E6EBE7; --screen:#0B0E0D;
+  --chip:#E6EBE7; --screen:#0B0E0D; --scrim:rgba(10,14,12,.45);
   --font-body: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -24,108 +25,134 @@
     --bg:#0E1311; --panel:#161C19; --ink:#E2EAE5; --muted:#98A69E; --line:#29332E;
     --accent:#3DC6A4; --accent-ink:#04241C; --accent-soft:#143A30;
     --warn:#E6AA42; --warn-soft:#382A10; --danger:#F2776C; --danger-soft:#3A1B18;
-    --chip:#1F2723; --screen:#050706; color-scheme:dark;
+    --chip:#1F2723; --screen:#050706; --scrim:rgba(0,0,0,.6); color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0E1311; --panel:#161C19; --ink:#E2EAE5; --muted:#98A69E; --line:#29332E;
   --accent:#3DC6A4; --accent-ink:#04241C; --accent-soft:#143A30;
   --warn:#E6AA42; --warn-soft:#382A10; --danger:#F2776C; --danger-soft:#3A1B18;
-  --chip:#1F2723; --screen:#050706; color-scheme:dark;
+  --chip:#1F2723; --screen:#050706; --scrim:rgba(0,0,0,.6); color-scheme:dark;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.55}
-.wrap{max-width:1360px;margin:0 auto;padding-inline:16px;padding-block:14px 28px;display:grid;gap:12px}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5}
 button,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+kbd{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--chip)}
 
-.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;border-bottom:1px solid var(--line)}
+/* ---- base: stacked page for narrow or short screens ---- */
+.wrap{max-width:1360px;margin:0 auto;padding-inline:16px;padding-block:8px 0;display:grid;gap:10px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:6px;border-bottom:1px solid var(--line)}
 .brand{display:grid;min-width:0}
-.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
-h1{font-family:var(--font-display);font-weight:600;font-size:26px;line-height:1.1;margin:0;letter-spacing:.01em;text-wrap:balance}
-.meter{display:grid;gap:4px;min-width:160px;flex:1 1 200px;max-width:340px}
-.meter-text{font-variant-numeric:tabular-nums;color:var(--muted)}
+.eyebrow{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+h1{font-family:var(--font-display);font-weight:600;font-size:22px;line-height:1.1;margin:0;letter-spacing:.01em;white-space:nowrap}
+.meter{display:grid;gap:3px;min-width:130px;flex:0 1 220px}
+.meter-text{font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
 .meter-text b{color:var(--ink);font-family:var(--font-mono)}
-.bar{height:6px;border-radius:3px;background:var(--chip);overflow:hidden}
+.bar{height:5px;border-radius:3px;background:var(--chip);overflow:hidden}
 .bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .25s ease}
-.rater{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
-.rater input{width:10em;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:4px 8px}
-.lang{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px}
-.status{font-size:13px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);max-width:100%}
+.rater{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap}
+.rater input{width:9.5em;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:3px 8px}
+.status{font-size:12.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);min-width:0;flex:1 1 200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .status[data-state="ok"]{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 .status[data-state="local"]{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
 .status[data-state="error"]{color:var(--danger);border-color:var(--danger);background:var(--danger-soft)}
+.tbtn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;white-space:nowrap}
+.tbtn.copy{border-color:var(--accent);color:var(--accent);font-weight:600}
 
-.guide{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding-inline:14px;padding-block:8px}
-.guide summary{cursor:pointer;font-weight:600}
-.guide ul{margin:8px 0 4px;padding-left:20px;display:grid;gap:4px;max-width:80ch}
-kbd{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--chip)}
-
-.layout{display:grid;grid-template-columns:232px minmax(0,1fr);gap:16px;align-items:start}
-.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 72px);display:grid;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px}
-.rail-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
-.toggle{display:flex;align-items:center;gap:6px;cursor:pointer}
-.chips{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;max-height:min(70vh,640px);overflow:auto;padding:2px}
-.chip{font-family:var(--font-mono);font-size:12px;font-variant-numeric:tabular-nums;padding:5px 0;border-radius:5px;border:1px solid var(--line);background:transparent;cursor:pointer;color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.rail{display:grid;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;min-width:0}
+.rail-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.toggle{display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
+.chips{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:3.4em;gap:4px;overflow-x:auto;padding:2px 2px 6px}
+.chip{font-family:var(--font-mono);font-size:12px;font-variant-numeric:tabular-nums;padding:3px 0;border-radius:5px;border:1px solid var(--line);background:transparent;cursor:pointer;color:var(--muted)}
 .chip.done{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
 .chip.current{outline:2px solid var(--ink);outline-offset:1px;color:var(--ink)}
 
-.stage{display:grid;gap:14px;min-width:0}
-.viewer{display:grid;gap:8px;min-width:0}
-.viewer-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
-.vid{font-family:var(--font-display);font-size:30px;font-weight:600;line-height:1}
-.family{font-size:13px;padding:2px 8px;border-radius:4px;background:var(--chip);color:var(--muted)}
-.pos{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-left:auto}
-.video-box{background:var(--screen);border-radius:var(--radius);overflow:hidden;aspect-ratio:53/30;max-width:100%;display:grid;place-items:center}
+.viewer{display:grid;gap:6px;min-width:0}
+.viewer-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-width:0}
+.vid{font-family:var(--font-display);font-size:26px;font-weight:600;line-height:1}
+.family{font-size:12.5px;padding:2px 8px;border-radius:4px;background:var(--chip);color:var(--muted)}
+.tools{display:flex;gap:4px;margin-left:auto}
+.tools button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:2px 9px;cursor:pointer;font-size:12.5px;white-space:nowrap}
+.tools button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.pos{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.video-box{background:var(--screen);border-radius:var(--radius);overflow:hidden;aspect-ratio:53/30;width:100%;max-width:100%}
 .video-box video{width:100%;height:100%;object-fit:contain;display:block}
-.video-tools{display:flex;flex-wrap:wrap;gap:6px}
-.video-tools button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px}
-.video-tools button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
-.prompt{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;display:grid;gap:4px;min-width:0}
-.prompt .label{font-size:12px;color:var(--muted);letter-spacing:.04em}
-.prompt p{margin:0;max-height:5.4em;overflow:auto;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.prompt{display:flex;gap:10px;align-items:baseline;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:6px 10px;min-width:0}
+.prompt .label{flex:none;font-size:12px;color:var(--muted);letter-spacing:.03em}
+.prompt p{margin:0;min-width:0;max-height:4.4em;overflow:auto;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
 
-.sheet{display:grid;gap:12px}
-.qs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.q{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:10px 12px 12px;margin:0;min-width:0;display:grid;gap:6px;align-content:start}
+.sheet{display:grid;gap:8px;min-width:0}
+.sheet-body{display:grid;gap:8px;align-content:start;min-width:0}
+.qs{display:grid;gap:8px}
+.q{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:4px 10px 8px;margin:0;min-width:0;display:grid;gap:2px;align-content:start}
+.q.compact{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:4px}
 .q.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .q.missing{border-color:var(--danger);background:var(--danger-soft)}
-legend{font-weight:600;padding:0 4px;display:flex;align-items:baseline;gap:8px}
+legend{font-weight:600;font-size:14px;padding:0 4px;display:flex;align-items:baseline;gap:8px}
 legend .qn{font-family:var(--font-mono);font-size:12px;color:var(--accent)}
-.opt{display:grid;grid-template-columns:1.8em minmax(0,1fr);align-items:start;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid transparent}
+.opt{display:grid;grid-template-columns:1.7em minmax(0,1fr);align-items:start;gap:8px;padding:4px 8px;border-radius:6px;cursor:pointer;border:1px solid transparent;font-size:13.5px;line-height:1.4}
 .opt:hover{background:var(--chip)}
 .opt input{position:absolute;opacity:0;pointer-events:none}
-.opt .key{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);border-radius:4px;text-align:center;line-height:1.6}
+.opt .key{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);border-radius:4px;text-align:center;line-height:1.5}
 .opt:has(input:checked){background:var(--accent-soft);border-color:var(--accent)}
 .opt:has(input:checked) .key{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .opt:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:1px}
-.more{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding-inline:12px;padding-block:8px}
-.more summary{cursor:pointer;font-weight:600}
-.more-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:8px}
+.more{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding-inline:10px;padding-block:6px}
+.more summary{cursor:pointer;font-weight:600;font-size:13.5px}
+.more-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:6px}
 .mg{display:grid;gap:2px;align-content:start;min-width:0}
 .mg b{font-size:13px}
-.mg label{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:start;font-size:13px;padding:2px 0;cursor:pointer}
+.mg label{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:start;font-size:13px;padding:1px 0;cursor:pointer}
 .mg label input{margin:3px 0 0}
-.note{display:grid;gap:6px}
-.note label{font-weight:600}
-textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:8px;resize:vertical;min-height:2.6em}
-.actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;position:sticky;bottom:0;background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
-.actions .spacer{flex:1 1 auto;min-width:0}
-.msg{font-size:13px;color:var(--muted);min-width:0}
+.note{display:grid;gap:4px;margin-top:8px}
+.note label{font-weight:600;font-size:13px}
+textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:6px 8px;resize:vertical;min-height:2.4em}
+.actions{display:grid;gap:2px;position:sticky;bottom:0;background:var(--bg);padding-block:6px calc(8px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+.actions .row{display:flex;align-items:center;gap:8px}
+.msg{flex:1 1 auto;min-width:0;font-size:12px;color:var(--muted);line-height:1.3}
 .msg.err{color:var(--danger)}
 .msg.ok{color:var(--accent)}
-.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:8px 14px;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:7px 14px;cursor:pointer;white-space:nowrap}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
 .btn:disabled{opacity:.5;cursor:default}
-.foot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:12px}
-.foot textarea{font-family:var(--font-mono);font-size:11px;min-height:6em}
 
-@media (max-width: 1080px){ .qs, .more-grid{grid-template-columns:minmax(0,1fr)} }
-@media (max-width: 860px){
-  .layout{grid-template-columns:minmax(0,1fr)}
-  .rail{position:static}
-  .chips{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:3.6em;overflow-x:auto;max-height:none;padding-bottom:6px}
+.dlg{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:18px 20px;width:min(640px, calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto}
+.dlg::backdrop{background:var(--scrim)}
+.dlg h2{margin:0 0 10px;font-family:var(--font-display);font-weight:600;font-size:24px;line-height:1.1}
+.dlg ul{margin:0 0 12px;padding-left:20px;display:grid;gap:6px}
+.dlg .muted{color:var(--muted);font-size:13px;margin:0 0 14px}
+.dlg-actions{display:flex;justify-content:flex-end;gap:8px}
+.dlg textarea{font-family:var(--font-mono);font-size:11px;min-height:14em;margin-bottom:12px}
+
+/* ---- one-screen layout ---- */
+@media (min-width:1100px) and (min-height:600px){
+  html,body{height:100%;overflow:hidden}
+  .wrap{max-width:none;height:100vh;height:100dvh;grid-template-rows:auto minmax(0,1fr);padding-block:4px 10px;gap:10px}
+  .top{position:static;flex-wrap:nowrap}
+  .layout{grid-template-columns:188px minmax(0,1fr) clamp(340px,26vw,420px);gap:12px;min-height:0}
+  .rail{grid-template-rows:auto minmax(0,1fr);align-content:start;min-height:0}
+  .chips{grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:repeat(5,minmax(0,1fr));align-content:start;overflow-x:hidden;overflow-y:auto;min-height:0;padding:2px}
+  .viewer{grid-template-rows:auto minmax(0,1fr) auto;min-height:0}
+  .video-box{aspect-ratio:auto;height:100%;min-height:0}
+  .sheet{display:flex;flex-direction:column;gap:0;min-height:0}
+  .sheet-body{flex:0 1 auto;overflow-y:auto;min-height:0;padding:2px 4px 8px 2px}
+  .more-grid{grid-template-columns:minmax(0,1fr)}
+  .actions{flex:none;position:static;padding-block:6px 0}
+}
+/* short laptop screens: tighten the question panel so all three questions stay visible */
+@media (min-width:1100px) and (min-height:600px) and (max-height:780px){
+  .layout{grid-template-columns:176px minmax(0,1fr) clamp(360px,29vw,440px)}
+  .eyebrow{display:none}
+  h1{font-size:20px}
+  .vid{font-size:22px}
+  .sheet-body,.qs{gap:6px}
+  .q{padding:2px 8px 6px;gap:1px}
+  legend{font-size:13px}
+  .opt{padding:2px 8px;font-size:13px;line-height:1.35}
+  .prompt p{max-height:2.9em}
 }
 @media (prefers-reduced-motion: reduce){ .bar span{transition:none} }
 </style>
@@ -142,19 +169,11 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
       <div class="bar"><span id="barFill"></span></div>
     </div>
     <label class="rater" for="rater"><span data-i18n="rater"></span> <input id="rater" type="text" autocomplete="name"></label>
-    <button type="button" class="lang" id="langBtn"></button>
     <div class="status" id="status" data-state="pending"></div>
+    <button type="button" class="tbtn copy" id="copyAll" data-i18n="copyAll"></button>
+    <button type="button" class="tbtn" id="helpBtn" data-i18n="help"></button>
+    <button type="button" class="tbtn" id="langBtn"></button>
   </header>
-
-  <details class="guide" id="guide" open>
-    <summary data-i18n="guideTitle"></summary>
-    <ul>
-      <li data-i18n-html="guide1"></li>
-      <li data-i18n="guide2"></li>
-      <li data-i18n="guide3"></li>
-      <li data-i18n-html="guide4"></li>
-    </ul>
-  </details>
 
   <div class="layout">
     <aside class="rail" id="rail">
@@ -165,54 +184,67 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
       <div class="chips" id="chips"></div>
     </aside>
 
-    <main class="stage">
-      <section class="viewer" id="viewer">
-        <div class="viewer-head">
-          <span class="vid" id="vidLabel">v001</span>
-          <span class="family" id="family"></span>
-          <span class="pos" id="pos">1 / 78</span>
-        </div>
-        <div class="video-box">
-          <video id="player" muted loop playsinline autoplay controls preload="auto"></video>
-        </div>
-        <div class="video-tools" id="tools">
+    <section class="viewer" id="viewer">
+      <div class="viewer-head">
+        <span class="vid" id="vidLabel">v001</span>
+        <span class="family" id="family"></span>
+        <div class="tools" id="tools">
           <button type="button" data-rate="0.5" data-i18n="slow"></button>
           <button type="button" data-rate="1" class="on" data-i18n="normal"></button>
           <button type="button" id="replay" data-i18n="replay"></button>
         </div>
-        <div class="prompt">
-          <span class="label" data-i18n="promptLabel"></span>
-          <p id="prompt"></p>
-        </div>
-      </section>
+        <span class="pos" id="pos">1 / 78</span>
+      </div>
+      <div class="video-box">
+        <video id="player" muted loop playsinline autoplay controls preload="auto"></video>
+      </div>
+      <div class="prompt">
+        <span class="label" data-i18n="promptLabel"></span>
+        <p id="prompt"></p>
+      </div>
+    </section>
 
-      <form class="sheet" id="sheet" novalidate>
+    <form class="sheet" id="sheet" novalidate>
+      <div class="sheet-body" id="sheetBody">
         <div class="qs" id="qs"></div>
         <details class="more" id="more">
           <summary data-i18n="moreTitle"></summary>
           <div class="more-grid" id="moreGrid"></div>
+          <div class="note">
+            <label for="note" data-i18n="noteLabel"></label>
+            <textarea id="note" rows="2"></textarea>
+          </div>
         </details>
-        <div class="note">
-          <label for="note" data-i18n="noteLabel"></label>
-          <textarea id="note" rows="2"></textarea>
-        </div>
-        <div class="actions">
+      </div>
+      <div class="actions">
+        <div class="row">
           <button type="button" class="btn" id="prev" data-i18n="prev"></button>
           <span class="msg" id="msg"></span>
-          <span class="spacer"></span>
           <button type="button" class="btn" id="skip" data-i18n="next"></button>
           <button type="submit" class="btn primary" id="save" data-i18n="save"></button>
         </div>
-      </form>
-    </main>
+      </div>
+    </form>
   </div>
-
-  <footer class="foot">
-    <span id="footNote"></span>
-    <button type="button" class="btn" id="copyAll" data-i18n="copyAll"></button>
-    <textarea id="copyBox" hidden readonly></textarea>
-  </footer>
 </div>
+
+<dialog class="dlg" id="guideDlg" aria-labelledby="guideTitle">
+  <h2 id="guideTitle" data-i18n="guideTitle"></h2>
+  <ul>
+    <li data-i18n-html="guide1"></li>
+    <li data-i18n="guide2"></li>
+    <li data-i18n="guide3"></li>
+    <li data-i18n-html="guide4"></li>
+  </ul>
+  <p class="muted" id="footNote"></p>
+  <div class="dlg-actions"><button type="button" class="btn primary" id="guideClose" data-i18n="gotIt"></button></div>
+</dialog>
+
+<dialog class="dlg" id="copyDlg">
+  <p id="copyHint" data-i18n="copyFail"></p>
+  <textarea id="copyBox" readonly></textarea>
+  <div class="dlg-actions"><button type="button" class="btn" id="copyClose" data-i18n="close"></button></div>
+</dialog>
 
 <script type="application/json" id="manifest">
 {
@@ -929,41 +961,43 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
   "use strict";
   const T = {
     zh: {
-      eyebrow:"GeoT2V · O31 标注试点", title:"生成视频标注台", rater:"评分人", raterPh:"你的名字或缩写", langBtn:"English",
+      eyebrow:"GeoT2V · O31 标注试点", title:"生成视频标注台", rater:"评分人", raterPh:"你的名字或缩写", langBtn:"English", help:"怎么标",
       meter:"已标 {done} / {total} 段",
       guideTitle:"怎么标（每段约 10–15 秒）",
       guide1:"每段视频回答 3 道单选题。按数字键 <kbd>1</kbd>–<kbd>4</kbd> 作答，答完一题自动跳到下一题，3 题答完自动保存并进入下一段。也可以直接用鼠标点。",
       guide2:"判断镜头有没有真的移动，看近处和远处：真的在走动时，近处的东西比远处移动得快，前后遮挡关系会变；原地转动或变焦时，整幅画面像一张图在平移或放大。",
-      guide3:"拿不准就选“说不准”。想补充的细节可以展开“更多细节（可选）”，不填也可以。",
+      guide3:"拿不准就选“说不准”。想补充细节或写备注，可以展开右侧的“更多细节和备注（可选）”，不填也可以。",
       guide4:"视频已随机打乱，页面上不显示模型名。标过的可以点左侧编号回去改，以最后一次保存为准。<kbd>←</kbd> <kbd>→</kbd> 切换视频。",
+      gotIt:"知道了，开始标注", close:"关闭",
       clips:"视频列表", onlyTodo:"只看未标", familyPrefix:"运镜提示：",
-      slow:"0.5× 慢放", normal:"1× 原速", replay:"从头播放", promptLabel:"提示词（原文）",
-      qn:"第 {n} 题", moreTitle:"更多细节（可选）", noteLabel:"备注（可选）", notePh:"例如：第 3 秒左右桌子腿变成了三条",
+      slow:"0.5× 慢放", normal:"1× 原速", replay:"从头播放", promptLabel:"提示词",
+      qn:"第 {n} 题", moreTitle:"更多细节和备注（可选）", noteLabel:"备注", notePh:"例如：第 3 秒左右桌子腿变成了三条",
       prev:"上一段", next:"下一段", save:"保存并下一段", copyAll:"复制全部结果（JSON）",
       needAll:"3 道题都要选（拿不准就选“说不准”）。", needRater:"请先在页面顶部填上评分人（名字或缩写）。",
-      saved:"已保存 {id}", allDone:"全部 {total} 段都标完了，谢谢！", unsaved:"这一段有没保存的改动，再点一次“下一段”会放弃这些改动。",
-      saveFail:"写入 votes.json 失败，已先存在浏览器里。", copied:"全部结果已复制到剪贴板。", copyFail:"没能自动复制，已选中下面的文本，请手动复制。",
-      stPending:"正在检查保存方式…", stOk:"已连接：每次保存都写进本机文件 votes.json", stLocal:"结果保存在你的浏览器里，标完请复制结果发给 Chenrui", stError:"保存出错：结果暂存在浏览器里，标完请点底部“复制全部结果”",
-      footLocal:"每次保存都会写进本机文件 votes.json，Claude 可以直接读取，不需要另外发送。", footPublic:"结果保存在你的浏览器里。全部标完后，点右边的按钮复制结果，把复制的内容发给 Chenrui。",
+      saved:"已保存 {id}", allDone:"全部 {total} 段都标完了，谢谢！请点顶部“复制全部结果（JSON）”。", unsaved:"这一段有没保存的改动，再点一次“下一段”会放弃这些改动。",
+      saveFail:"写入 votes.json 失败，已先存在浏览器里。", copied:"全部结果已复制到剪贴板。", copyFail:"没能自动复制。下面的文本已选中，请按 Ctrl+C（Mac 上按 ⌘C）复制。",
+      stPending:"正在检查保存方式…", stOk:"已连接：每次保存都写进本机文件 votes.json", stLocal:"结果保存在你的浏览器里，标完请复制结果发给 Chenrui", stError:"保存出错：结果暂存在浏览器里，标完请点顶部“复制全部结果”",
+      footLocal:"每次保存都会写进本机文件 votes.json，Claude 可以直接读取，不需要另外发送。", footPublic:"结果保存在你的浏览器里。全部标完后，点页面顶部的“复制全部结果（JSON）”，把复制的内容发给 Chenrui。",
       fam:{orbit:"环绕", dolly:"推拉", lateral:"平移", roll:"滚转", tilt:"俯仰", pan:"摇镜", other:"其他"}
     },
     en: {
-      eyebrow:"GeoT2V · O31 labeling pilot", title:"Generated-Video Labeling", rater:"Rater", raterPh:"Your name or initials", langBtn:"中文",
+      eyebrow:"GeoT2V · O31 labeling pilot", title:"Generated-Video Labeling", rater:"Rater", raterPh:"Your name or initials", langBtn:"中文", help:"How to label",
       meter:"Labeled {done} / {total}",
       guideTitle:"How to label (about 10–15 s per clip)",
       guide1:"Answer three single-choice questions per clip. Press <kbd>1</kbd>–<kbd>4</kbd> to answer; the next question becomes active, and after the third answer the clip is saved and the next one opens. Clicking works too.",
       guide2:"To tell whether the camera really moves, compare near and far things: when the camera travels, near objects move faster than far ones and occlusions change; when it only turns in place or zooms, the whole picture slides or scales like a flat image.",
-      guide3:"If unsure, choose “Not sure”. Extra details are optional under “More details”.",
+      guide3:"If unsure, choose “Not sure”. Extra details and a note are optional under “More details and note” on the right.",
       guide4:"Clips are shuffled and the page never shows which model made them. Click a number on the left to revisit a clip; the last save counts. <kbd>←</kbd> <kbd>→</kbd> switch clips.",
+      gotIt:"Got it, start labeling", close:"Close",
       clips:"Clips", onlyTodo:"Unlabeled only", familyPrefix:"Camera prompt: ",
-      slow:"0.5× slow", normal:"1× normal", replay:"Restart", promptLabel:"Prompt (original)",
-      qn:"Q{n}", moreTitle:"More details (optional)", noteLabel:"Note (optional)", notePh:"e.g. around 3 s the table suddenly has three legs",
+      slow:"0.5× slow", normal:"1× normal", replay:"Restart", promptLabel:"Prompt",
+      qn:"Q{n}", moreTitle:"More details and note (optional)", noteLabel:"Note", notePh:"e.g. around 3 s the table suddenly has three legs",
       prev:"Previous", next:"Next", save:"Save and next", copyAll:"Copy all results (JSON)",
       needAll:"Answer all three questions (choose “Not sure” if unsure).", needRater:"Please enter your name or initials at the top first.",
-      saved:"Saved {id}", allDone:"All {total} clips are labeled. Thank you!", unsaved:"This clip has unsaved changes. Click “Next” again to discard them.",
-      saveFail:"Could not write votes.json; saved in this browser for now.", copied:"All results copied to the clipboard.", copyFail:"Could not copy automatically. The text below is selected; please copy it.",
-      stPending:"Checking where results are saved…", stOk:"Connected: every save goes to votes.json on this computer", stLocal:"Results stay in your browser; when done, copy them and send them to Chenrui", stError:"Save error: results are kept in this browser; use “Copy all results” at the bottom",
-      footLocal:"Every save is written to votes.json on this computer; nothing needs to be sent.", footPublic:"Results are kept in your browser. When you are done, click the button on the right to copy them, then send the copied text to Chenrui.",
+      saved:"Saved {id}", allDone:"All {total} clips are labeled. Thank you! Please click “Copy all results (JSON)” at the top.", unsaved:"This clip has unsaved changes. Click “Next” again to discard them.",
+      saveFail:"Could not write votes.json; saved in this browser for now.", copied:"All results copied to the clipboard.", copyFail:"Could not copy automatically. The text below is selected; press Ctrl+C (⌘C on a Mac) to copy it.",
+      stPending:"Checking where results are saved…", stOk:"Connected: every save goes to votes.json on this computer", stLocal:"Results stay in your browser; when done, copy them and send them to Chenrui", stError:"Save error: results are kept in this browser; use “Copy all results” at the top",
+      footLocal:"Every save is written to votes.json on this computer; nothing needs to be sent.", footPublic:"Results are kept in your browser. When you are done, click “Copy all results (JSON)” at the top of the page and send the copied text to Chenrui.",
       fam:{orbit:"orbit", dolly:"dolly", lateral:"lateral", roll:"roll", tilt:"tilt", pan:"pan", other:"other"}
     }
   };
@@ -978,7 +1012,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
       ["plausible", {zh:"有合理的运动（人、动物、水、火、风）", en:"Plausible motion (people, animals, water, fire, wind)"}],
       ["inconsistent", {zh:"有不合理的变化（变形、凭空出现或消失、转回来对不上）", en:"Implausible change (deforms, appears or vanishes, differs when the view returns)"}],
       ["unsure", {zh:"说不准", en:"Not sure"}]]},
-    {key:"q3", title:{zh:"能当一个静态三维场景的拍摄吗", en:"Could this serve as a capture of one static 3D scene?"}, opts:[
+    {key:"q3", compact:true, title:{zh:"能当一个静态三维场景的拍摄吗", en:"Could this be a capture of one static 3D scene?"}, opts:[
       ["yes", {zh:"能", en:"Yes"}],
       ["mostly", {zh:"大体能，有局部问题", en:"Mostly, with local problems"}],
       ["no", {zh:"不能", en:"No"}],
@@ -1007,7 +1041,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
       ["C6", {zh:"文字、水印或字幕", en:"Text, watermark or captions"}],
       ["C7", {zh:"内容与提示词不符", en:"Content does not match the prompt"}]]}
   ];
-  const STORE_KEY = "o31-labels-v2", RATER_KEY = "o31-rater", LANG_KEY = "o31-lang";
+  const STORE_KEY = "o31-labels-v2", RATER_KEY = "o31-rater", LANG_KEY = "o31-lang", GUIDE_KEY = "o31-guide-seen";
   const $ = id => document.getElementById(id);
 
   let lang = "zh";
@@ -1031,12 +1065,21 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
     return r.json();
   }
 
+  // ---- dialogs ----
+  function openDlg(d){ if (typeof d.showModal === "function"){ if (!d.open) d.showModal(); } else d.setAttribute("open", ""); }
+  function closeDlg(d){ if (typeof d.close === "function") d.close(); else d.removeAttribute("open"); }
+  const anyDlgOpen = () => !!document.querySelector("dialog[open]");
+  $("helpBtn").addEventListener("click", () => openDlg($("guideDlg")));
+  $("guideClose").addEventListener("click", () => closeDlg($("guideDlg")));
+  $("guideDlg").addEventListener("close", () => { try { localStorage.setItem(GUIDE_KEY, "1"); } catch(e) {} });
+  $("copyClose").addEventListener("click", () => closeDlg($("copyDlg")));
+
   // ---- build questions ----
   const textRefs = [];
   const qsEl = $("qs");
   QUESTIONS.forEach((q, qi) => {
     const fs = document.createElement("fieldset");
-    fs.className = "q"; fs.id = "q-" + q.key;
+    fs.className = q.compact ? "q compact" : "q"; fs.id = "q-" + q.key;
     const lg = document.createElement("legend");
     const qn = document.createElement("span"); qn.className = "qn";
     const tt = document.createElement("span");
@@ -1080,7 +1123,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
     $("rail").setAttribute("aria-label", t("clips"));
     $("copyBox").setAttribute("aria-label", t("copyAll"));
     textRefs.forEach(fn => fn());
-    $("status").textContent = t(statusKey);
+    $("status").textContent = t(statusKey); $("status").title = t(statusKey);
     $("footNote").textContent = t(footKey);
     if (msgState.key) setMsg(msgState.key, msgState.vars, msgState.kind);
     renderChips();
@@ -1088,7 +1131,25 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
   }
   $("langBtn").addEventListener("click", () => { lang = lang === "zh" ? "en" : "zh"; try { localStorage.setItem(LANG_KEY, lang); } catch(e) {} applyLang(); });
 
-  function setActive(i){ activeQ = i; QUESTIONS.forEach((q, qi) => $("q-" + q.key).classList.toggle("active", qi === i)); }
+  // Scroll an inner panel just enough to show el; the page itself never scrolls on wide screens.
+  function reveal(box, el){
+    if (!box || !el) return;
+    const b = box.getBoundingClientRect(), r = el.getBoundingClientRect();
+    if (box.scrollHeight > box.clientHeight + 1){
+      if (r.top < b.top) box.scrollTop -= (b.top - r.top) + 4;
+      else if (r.bottom > b.bottom) box.scrollTop += (r.bottom - b.bottom) + 4;
+    }
+    if (box.scrollWidth > box.clientWidth + 1){
+      if (r.left < b.left) box.scrollLeft -= (b.left - r.left) + 4;
+      else if (r.right > b.right) box.scrollLeft += (r.right - b.right) + 4;
+    }
+  }
+  function setActive(i){
+    activeQ = i;
+    QUESTIONS.forEach((q, qi) => $("q-" + q.key).classList.toggle("active", qi === i));
+    const body = $("sheetBody");
+    if (getComputedStyle(body).overflowY === "auto") reveal(body, $("q-" + QUESTIONS[i].key));
+  }
   function readForm(){
     const out = {};
     QUESTIONS.forEach(q => { const c = document.querySelector('input[name="' + q.key + '"]:checked'); out[q.key] = c ? c.value : null; });
@@ -1104,7 +1165,8 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
     const more = rec && rec.more ? rec.more : [];
     document.querySelectorAll('input[name="more"]').forEach(i => { i.checked = more.includes(i.value); });
     $("note").value = rec && rec.note ? rec.note : "";
-    if (more.length) $("more").open = true;
+    if (more.length || (rec && rec.note)) $("more").open = true;
+    $("sheetBody").scrollTop = 0;
     const firstEmpty = QUESTIONS.findIndex(q => !(rec && rec[q.key]));
     setActive(firstEmpty === -1 ? 0 : firstEmpty);
   }
@@ -1152,12 +1214,13 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
     $("pos").textContent = (i + 1) + " / " + total;
     $("family").textContent = t("familyPrefix") + ((T[lang].fam || {})[v.family] || v.family || "—");
     $("prompt").textContent = v.prompt || "";
+    $("prompt").scrollTop = 0;
     player.src = v.file; player.playbackRate = rate;
     const p = player.play(); if (p && p.catch) p.catch(() => {});
     $("more").open = false;
     fillForm(labels[v.id]);
     renderChips();
-    const chip = chipsEl.children[i]; if (chip && chip.scrollIntoView) chip.scrollIntoView({block:"nearest", inline:"nearest"});
+    reveal(chipsEl, chipsEl.children[i]);
   }
   function nextIndex(from){
     const only = $("onlyTodo").checked;
@@ -1176,7 +1239,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
     msgState = {key: key || "", vars: vars || null, kind: kind || ""};
     const m = $("msg"); m.textContent = key ? t(key, vars) : ""; m.className = "msg" + (kind ? " " + kind : "");
   }
-  function setStatus(state, key){ statusState = state; statusKey = key; const s = $("status"); s.dataset.state = state; s.textContent = t(key); }
+  function setStatus(state, key){ statusState = state; statusKey = key; const s = $("status"); s.dataset.state = state; s.textContent = t(key); s.title = t(key); }
   function persistLocal(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(labels)); } catch(e) {} }
 
   // ---- save ----
@@ -1211,6 +1274,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
   });
   $("onlyTodo").addEventListener("change", renderChips);
   document.addEventListener("keydown", e => {
+    if (anyDlgOpen()) return;
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){ e.preventDefault(); $("sheet").requestSubmit(); return; }
     const el = e.target;
     if (el && (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && el.type === "text"))) return;
@@ -1228,14 +1292,17 @@ textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:va
 
   $("copyAll").addEventListener("click", async () => {
     const text = JSON.stringify({schema:"O31-v2", rater:$("rater").value.trim(), exportedAt:new Date().toISOString(), count:Object.keys(labels).length, labels}, null, 1);
-    const box = $("copyBox"); box.value = text; box.hidden = false;
+    const box = $("copyBox"); box.value = text;
     try { await navigator.clipboard.writeText(text); setMsg("copied", null, "ok"); }
-    catch(e){ box.focus(); box.select(); setMsg("copyFail", null, "err"); }
+    catch(e){ openDlg($("copyDlg")); box.focus(); box.select(); }
   });
 
   applyLang();
   const firstTodo = manifest.findIndex(v => !labels[v.id]);
   go(firstTodo === -1 ? 0 : firstTodo);
+  let guideSeen = false;
+  try { guideSeen = localStorage.getItem(GUIDE_KEY) === "1"; } catch(e) {}
+  if (!guideSeen && Object.keys(labels).length === 0) openDlg($("guideDlg"));
 
   // ---- local save service (serve.py on the author's computer); the public site has none ----
   (async () => {
