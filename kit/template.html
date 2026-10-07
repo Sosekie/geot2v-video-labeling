@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>视频标注台 · Video Labeling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: on screens at least 1100x600 the whole tool fits one screen (clip rail | viewer | question panel) and only inner panels scroll.
+   Smaller screens fall back to a stacked page that scrolls. */
+:root{
+  --bg:#F2F4F1; --panel:#FFFFFF; --ink:#16201B; --muted:#56635C; --line:#D6DDD8;
+  --accent:#0A7560; --accent-ink:#FFFFFF; --accent-soft:#DBEEE8;
+  --warn:#8F5B00; --warn-soft:#FAEFD8; --danger:#B42318; --danger-soft:#FBE4E1;
+  --chip:#E6EBE7; --screen:#0B0E0D; --scrim:rgba(10,14,12,.45);
+  --font-body: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius: 8px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1311; --panel:#161C19; --ink:#E2EAE5; --muted:#98A69E; --line:#29332E;
+    --accent:#3DC6A4; --accent-ink:#04241C; --accent-soft:#143A30;
+    --warn:#E6AA42; --warn-soft:#382A10; --danger:#F2776C; --danger-soft:#3A1B18;
+    --chip:#1F2723; --screen:#050706; --scrim:rgba(0,0,0,.6); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1311; --panel:#161C19; --ink:#E2EAE5; --muted:#98A69E; --line:#29332E;
+  --accent:#3DC6A4; --accent-ink:#04241C; --accent-soft:#143A30;
+  --warn:#E6AA42; --warn-soft:#382A10; --danger:#F2776C; --danger-soft:#3A1B18;
+  --chip:#1F2723; --screen:#050706; --scrim:rgba(0,0,0,.6); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+kbd{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--chip)}
+
+/* ---- base: stacked page for narrow or short screens ---- */
+.wrap{max-width:1360px;margin:0 auto;padding-inline:16px;padding-block:8px 0;display:grid;gap:10px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:6px;border-bottom:1px solid var(--line)}
+.brand{display:grid;min-width:0}
+.eyebrow{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+h1{font-family:var(--font-display);font-weight:600;font-size:22px;line-height:1.1;margin:0;letter-spacing:.01em;white-space:nowrap}
+.meter{display:grid;gap:3px;min-width:130px;flex:0 1 220px}
+.meter-text{font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+.meter-text b{color:var(--ink);font-family:var(--font-mono)}
+.bar{height:5px;border-radius:3px;background:var(--chip);overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .25s ease}
+.rater{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap}
+.rater input{width:9.5em;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:3px 8px}
+.status{font-size:12.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);min-width:0;flex:1 1 200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status[data-state="ok"]{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.status[data-state="local"]{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.status[data-state="error"]{color:var(--danger);border-color:var(--danger);background:var(--danger-soft)}
+.tbtn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;white-space:nowrap}
+.tbtn.copy{border-color:var(--accent);color:var(--accent);font-weight:600}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.rail{display:grid;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;min-width:0}
+.rail-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.toggle{display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
+.chips{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:3.4em;gap:4px;overflow-x:auto;padding:2px 2px 6px}
+.chip{font-family:var(--font-mono);font-size:12px;font-variant-numeric:tabular-nums;padding:3px 0;border-radius:5px;border:1px solid var(--line);background:transparent;cursor:pointer;color:var(--muted)}
+.chip.done{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.chip.current{outline:2px solid var(--ink);outline-offset:1px;color:var(--ink)}
+
+.viewer{display:grid;gap:6px;min-width:0}
+.viewer-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-width:0}
+.vid{font-family:var(--font-display);font-size:26px;font-weight:600;line-height:1}
+.family{font-size:12.5px;padding:2px 8px;border-radius:4px;background:var(--chip);color:var(--muted)}
+.tools{display:flex;gap:4px;margin-left:auto}
+.tools button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:2px 9px;cursor:pointer;font-size:12.5px;white-space:nowrap}
+.tools button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.pos{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.video-box{background:var(--screen);border-radius:var(--radius);overflow:hidden;aspect-ratio:53/30;width:100%;max-width:100%}
+.video-box video{width:100%;height:100%;object-fit:contain;display:block}
+.prompt{display:flex;gap:10px;align-items:baseline;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:6px 10px;min-width:0}
+.prompt .label{flex:none;font-size:12px;color:var(--muted);letter-spacing:.03em}
+.prompt p{margin:0;min-width:0;max-height:4.4em;overflow:auto;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+
+.sheet{display:grid;gap:8px;min-width:0}
+.sheet-body{display:grid;gap:8px;align-content:start;min-width:0}
+.qs{display:grid;gap:8px}
+.q{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:4px 10px 8px;margin:0;min-width:0;display:grid;gap:2px;align-content:start}
+.q.compact{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:4px}
+.q.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.q.missing{border-color:var(--danger);background:var(--danger-soft)}
+legend{font-weight:600;font-size:14px;padding:0 4px;display:flex;align-items:baseline;gap:8px}
+legend .qn{font-family:var(--font-mono);font-size:12px;color:var(--accent)}
+.opt{display:grid;grid-template-columns:1.7em minmax(0,1fr);align-items:start;gap:8px;padding:4px 8px;border-radius:6px;cursor:pointer;border:1px solid transparent;font-size:13.5px;line-height:1.4}
+.opt:hover{background:var(--chip)}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt .key{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);border-radius:4px;text-align:center;line-height:1.5}
+.opt:has(input:checked){background:var(--accent-soft);border-color:var(--accent)}
+.opt:has(input:checked) .key{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.opt:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:1px}
+.more{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding-inline:10px;padding-block:6px}
+.more summary{cursor:pointer;font-weight:600;font-size:13.5px}
+.more-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:6px}
+.mg{display:grid;gap:2px;align-content:start;min-width:0}
+.mg b{font-size:13px}
+.mg label{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:start;font-size:13px;padding:1px 0;cursor:pointer}
+.mg label input{margin:3px 0 0}
+.note{display:grid;gap:4px;margin-top:8px}
+.note label{font-weight:600;font-size:13px}
+textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:6px 8px;resize:vertical;min-height:2.4em}
+.actions{display:grid;gap:2px;position:sticky;bottom:0;background:var(--bg);padding-block:6px calc(8px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+.actions .row{display:flex;align-items:center;gap:8px}
+.msg{flex:1 1 auto;min-width:0;font-size:12px;color:var(--muted);line-height:1.3}
+.msg.err{color:var(--danger)}
+.msg.ok{color:var(--accent)}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:7px 14px;cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn:disabled{opacity:.5;cursor:default}
+
+.dlg{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:18px 20px;width:min(640px, calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto}
+.dlg::backdrop{background:var(--scrim)}
+.dlg h2{margin:0 0 10px;font-family:var(--font-display);font-weight:600;font-size:24px;line-height:1.1}
+.dlg ul{margin:0 0 12px;padding-left:20px;display:grid;gap:6px}
+.dlg .muted{color:var(--muted);font-size:13px;margin:0 0 14px}
+.dlg-actions{display:flex;justify-content:flex-end;gap:8px}
+.dlg textarea{font-family:var(--font-mono);font-size:11px;min-height:14em;margin-bottom:12px}
+
+/* ---- one-screen layout ---- */
+@media (min-width:1100px) and (min-height:600px){
+  html,body{height:100%;overflow:hidden}
+  .wrap{max-width:none;height:100vh;height:100dvh;grid-template-rows:auto minmax(0,1fr);padding-block:4px 10px;gap:10px}
+  .top{position:static;flex-wrap:nowrap}
+  .layout{grid-template-columns:188px minmax(0,1fr) clamp(340px,26vw,420px);gap:12px;min-height:0}
+  .rail{grid-template-rows:auto minmax(0,1fr);align-content:start;min-height:0}
+  .chips{grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:repeat(5,minmax(0,1fr));align-content:start;overflow-x:hidden;overflow-y:auto;min-height:0;padding:2px}
+  .viewer{grid-template-rows:auto minmax(0,1fr) auto;min-height:0}
+  .video-box{aspect-ratio:auto;height:100%;min-height:0}
+  .sheet{display:flex;flex-direction:column;gap:0;min-height:0}
+  .sheet-body{flex:0 1 auto;overflow-y:auto;min-height:0;padding:2px 4px 8px 2px}
+  .more-grid{grid-template-columns:minmax(0,1fr)}
+  .actions{flex:none;position:static;padding-block:6px 0}
+}
+/* short laptop screens: tighten the question panel so all three questions stay visible */
+@media (min-width:1100px) and (min-height:600px) and (max-height:780px){
+  .layout{grid-template-columns:176px minmax(0,1fr) clamp(360px,29vw,440px)}
+  .eyebrow{display:none}
+  h1{font-size:20px}
+  .vid{font-size:22px}
+  .sheet-body,.qs{gap:6px}
+  .q{padding:2px 8px 6px;gap:1px}
+  legend{font-size:13px}
+  .opt{padding:2px 8px;font-size:13px;line-height:1.35}
+  .prompt p{max-height:2.9em}
+}
+@media (prefers-reduced-motion: reduce){ .bar span{transition:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="eyebrow" data-i18n="eyebrow"></span>
+      <h1 data-i18n="title"></h1>
+    </div>
+    <div class="meter" aria-live="polite">
+      <div class="meter-text" id="meterText"></div>
+      <div class="bar"><span id="barFill"></span></div>
+    </div>
+    <label class="rater" for="rater"><span data-i18n="rater"></span> <input id="rater" type="text" autocomplete="name"></label>
+    <div class="status" id="status" data-state="pending"></div>
+    <button type="button" class="tbtn copy" id="copyAll" data-i18n="copyAll"></button>
+    <button type="button" class="tbtn" id="helpBtn" data-i18n="help"></button>
+    <button type="button" class="tbtn" id="langBtn"></button>
+  </header>
+
+  <div class="layout">
+    <aside class="rail" id="rail">
+      <div class="rail-head">
+        <span data-i18n="clips"></span>
+        <label class="toggle"><input type="checkbox" id="onlyTodo"> <span data-i18n="onlyTodo"></span></label>
+      </div>
+      <div class="chips" id="chips"></div>
+    </aside>
+
+    <section class="viewer" id="viewer">
+      <div class="viewer-head">
+        <span class="vid" id="vidLabel">v001</span>
+        <span class="family" id="family"></span>
+        <div class="tools" id="tools">
+          <button type="button" data-rate="0.5" data-i18n="slow"></button>
+          <button type="button" data-rate="1" class="on" data-i18n="normal"></button>
+          <button type="button" id="replay" data-i18n="replay"></button>
+        </div>
+        <span class="pos" id="pos">1 / 78</span>
+      </div>
+      <div class="video-box">
+        <video id="player" muted loop playsinline autoplay controls preload="auto"></video>
+      </div>
+      <div class="prompt">
+        <span class="label" data-i18n="promptLabel"></span>
+        <p id="prompt"></p>
+      </div>
+    </section>
+
+    <form class="sheet" id="sheet" novalidate>
+      <div class="sheet-body" id="sheetBody">
+        <div class="qs" id="qs"></div>
+        <details class="more" id="more">
+          <summary data-i18n="moreTitle"></summary>
+          <div class="more-grid" id="moreGrid"></div>
+          <div class="note">
+            <label for="note" data-i18n="noteLabel"></label>
+            <textarea id="note" rows="2"></textarea>
+          </div>
+        </details>
+      </div>
+      <div class="actions">
+        <div class="row">
+          <button type="button" class="btn" id="prev" data-i18n="prev"></button>
+          <span class="msg" id="msg"></span>
+          <button type="button" class="btn" id="skip" data-i18n="next"></button>
+          <button type="submit" class="btn primary" id="save" data-i18n="save"></button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<dialog class="dlg" id="guideDlg" aria-labelledby="guideTitle">
+  <h2 id="guideTitle" data-i18n="guideTitle"></h2>
+  <ul>
+    <li data-i18n-html="guide1"></li>
+    <li data-i18n="guide2"></li>
+    <li data-i18n="guide3"></li>
+    <li data-i18n-html="guide4"></li>
+  </ul>
+  <p class="muted" id="footNote"></p>
+  <div class="dlg-actions"><button type="button" class="btn primary" id="guideClose" data-i18n="gotIt"></button></div>
+</dialog>
+
+<dialog class="dlg" id="copyDlg">
+  <p id="copyHint" data-i18n="copyFail"></p>
+  <textarea id="copyBox" readonly></textarea>
+  <div class="dlg-actions"><button type="button" class="btn" id="copyClose" data-i18n="close"></button></div>
+</dialog>
+
+<script type="application/json" id="manifest">
+__MANIFEST__
+</script>
+<script>
+(function(){
+  "use strict";
+  // Site settings come from the manifest that build_site.py writes into this page.
+  let RAW = {};
+  try { RAW = JSON.parse(document.getElementById("manifest").textContent) || {}; } catch(e) { RAW = {}; }
+  const SITE = RAW.site || {};
+  const SITE_ID = String(SITE.id || "label-site").replace(/[^A-Za-z0-9_-]/g, "") || "label-site";
+  const SCHEMA = "GeoT2V-label-v3";
+  const SEND_TO = {zh: SITE.send_to_zh || "组织者", en: SITE.send_to_en || "the organizer"};
+  const REQUIRE_FULL_VIEW = SITE.require_full_view !== false;
+  const T = {
+    zh: {
+      eyebrow: SITE.eyebrow_zh || "视频标注", title: SITE.title_zh || "生成视频标注台", rater:"评分人", raterPh:"你的名字或缩写", langBtn:"English", help:"怎么标",
+      meter:"已标 {done} / {total} 段",
+      guideTitle:"怎么标（每段约 10–15 秒）",
+      guide1:"每段视频回答 3 道单选题。按数字键 <kbd>1</kbd>–<kbd>5</kbd> 作答，答完一题自动跳到下一题，3 题答完自动保存并进入下一段。也可以直接用鼠标点。每段要完整播完一遍才会保存。",
+      guide2:"判断镜头有没有真的移动，看近处和远处：真的在走动时，近处的东西比远处移动得快，前后遮挡关系会变；原地转动或变焦时，整幅画面像一张图在平移或放大。",
+      guide3:"第 2 题只看画面里的东西自己动没动，不算镜头运动。视频是噪声、花屏或黑屏时，第 1 题选“画面坏了”，其余两题会自动填好。拿不准就选“说不准”。",
+      guide4:"视频已随机打乱，页面上不显示模型名。标过的可以点左侧编号回去改，以最后一次保存为准。<kbd>←</kbd> <kbd>→</kbd> 切换视频。",
+      gotIt:"知道了，开始标注", close:"关闭",
+      clips:"视频列表", onlyTodo:"只看未标", familyPrefix:"运镜提示：",
+      slow:"0.5× 慢放", normal:"1× 原速", replay:"从头播放", promptLabel:"提示词",
+      qn:"第 {n} 题", moreTitle:"更多细节和备注（可选）", noteLabel:"备注", notePh:"例如：第 3 秒左右桌子腿变成了三条",
+      prev:"上一段", next:"下一段", save:"保存并下一段", copyAll:"复制全部结果（JSON）",
+      needAll:"3 道题都要选（拿不准就选“说不准”）。", needRater:"请先在页面顶部填上评分人（名字或缩写）。",
+      saved:"已保存 {id}", allDone:"全部 {total} 段都标完了，谢谢！请点顶部“复制全部结果（JSON）”。", unsaved:"这一段有没保存的改动，再点一次“下一段”会放弃这些改动。",
+      waitView:"答完了，这一段播完一遍后会自动保存。",
+      saveFail:"写入 votes.json 失败，已先存在浏览器里。", copied:"全部结果已复制到剪贴板。", copyFail:"没能自动复制。下面的文本已选中，请按 Ctrl+C（Mac 上按 ⌘C）复制。",
+      stPending:"正在检查保存方式…", stOk:"已连接：每次保存都写进本机文件 votes.json", stLocal:"结果保存在你的浏览器里，标完请复制结果发给{sendTo}", stError:"保存出错：结果暂存在浏览器里，标完请点顶部“复制全部结果”",
+      footLocal:"每次保存都会写进本机文件 votes.json，不需要另外发送。", footPublic:"结果保存在你的浏览器里。全部标完后，点页面顶部的“复制全部结果（JSON）”，把复制的内容发给{sendTo}。",
+      fam:{orbit:"环绕", dolly:"推拉", lateral:"平移", truck:"横移", locked:"固定机位", roll:"滚转", tilt:"俯仰", pan:"摇镜", other:"其他"}
+    },
+    en: {
+      eyebrow: SITE.eyebrow_en || "Video labeling", title: SITE.title_en || "Generated-Video Labeling", rater:"Rater", raterPh:"Your name or initials", langBtn:"中文", help:"How to label",
+      meter:"Labeled {done} / {total}",
+      guideTitle:"How to label (about 10–15 s per clip)",
+      guide1:"Answer three single-choice questions per clip. Press <kbd>1</kbd>–<kbd>5</kbd> to answer; the next question becomes active, and after the third answer the clip is saved and the next one opens. Clicking works too. A clip is saved only after it has played through once.",
+      guide2:"To tell whether the camera really moves, compare near and far things: when the camera travels, near objects move faster than far ones and occlusions change; when it only turns in place or zooms, the whole picture slides or scales like a flat image.",
+      guide3:"Question 2 is only about things in the scene moving by themselves, not about the camera. If a clip is noise, garbage or black, choose “Broken video” in question 1 and the other two answers are filled in for you. If unsure, choose “Not sure”.",
+      guide4:"Clips are shuffled and the page never shows which model made them. Click a number on the left to revisit a clip; the last save counts. <kbd>←</kbd> <kbd>→</kbd> switch clips.",
+      gotIt:"Got it, start labeling", close:"Close",
+      clips:"Clips", onlyTodo:"Unlabeled only", familyPrefix:"Camera prompt: ",
+      slow:"0.5× slow", normal:"1× normal", replay:"Restart", promptLabel:"Prompt",
+      qn:"Q{n}", moreTitle:"More details and note (optional)", noteLabel:"Note", notePh:"e.g. around 3 s the table suddenly has three legs",
+      prev:"Previous", next:"Next", save:"Save and next", copyAll:"Copy all results (JSON)",
+      needAll:"Answer all three questions (choose “Not sure” if unsure).", needRater:"Please enter your name or initials at the top first.",
+      saved:"Saved {id}", allDone:"All {total} clips are labeled. Thank you! Please click “Copy all results (JSON)” at the top.", unsaved:"This clip has unsaved changes. Click “Next” again to discard them.",
+      waitView:"All answered; this clip saves automatically once it has played through.",
+      saveFail:"Could not write votes.json; saved in this browser for now.", copied:"All results copied to the clipboard.", copyFail:"Could not copy automatically. The text below is selected; press Ctrl+C (⌘C on a Mac) to copy it.",
+      stPending:"Checking where results are saved…", stOk:"Connected: every save goes to votes.json on this computer", stLocal:"Results stay in your browser; when done, copy them and send them to {sendTo}", stError:"Save error: results are kept in this browser; use “Copy all results” at the top",
+      footLocal:"Every save is written to votes.json on this computer; nothing needs to be sent.", footPublic:"Results are kept in your browser. When you are done, click “Copy all results (JSON)” at the top of the page and send the copied text to {sendTo}.",
+      fam:{orbit:"orbit", dolly:"dolly", lateral:"lateral", truck:"truck", locked:"locked camera", roll:"roll", tilt:"tilt", pan:"pan", other:"other"}
+    }
+  };
+  const QUESTIONS = [
+    {key:"q1", title:{zh:"镜头", en:"Camera"}, opts:[
+      ["static", {zh:"几乎不动（画面静止，或只有画面里的东西在动）", en:"Barely moves (a still image, or only things in the scene move)"}],
+      ["noparallax", {zh:"原地转或变焦（近处和远处一起动）", en:"Turns in place or zooms (near and far move together)"}],
+      ["parallax", {zh:"真的在移动（近处比远处动得快）", en:"Really travels (near things move faster than far ones)"}],
+      ["unsure", {zh:"说不准", en:"Not sure"}],
+      ["broken", {zh:"画面坏了（噪声、花屏、黑屏）", en:"Broken video (noise, garbage, black)"}]]},
+    {key:"q2", title:{zh:"画面里的东西（不算镜头运动）", en:"Things in the scene (ignore the camera)"}, opts:[
+      ["none", {zh:"没有东西自己在动", en:"Nothing moves by itself"}],
+      ["plausible", {zh:"有东西自己在动，而且动得合理（人、动物、水、火、风）", en:"Something moves by itself, plausibly (people, animals, water, fire, wind)"}],
+      ["inconsistent", {zh:"有不合理的变化（变形、凭空出现或消失、转回来对不上）", en:"Implausible change (deforms, appears or vanishes, differs when the view returns)"}],
+      ["unsure", {zh:"说不准", en:"Not sure"}]]},
+    {key:"q3", compact:true, title:{zh:"能当一个静态三维场景的拍摄吗", en:"Could this be a capture of one static 3D scene?"}, opts:[
+      ["yes", {zh:"能", en:"Yes"}],
+      ["mostly", {zh:"大体能，有局部问题", en:"Mostly, with local problems"}],
+      ["no", {zh:"不能", en:"No"}],
+      ["unsure", {zh:"说不准", en:"Not sure"}]]}
+  ];
+  const MORE = [
+    {title:{zh:"镜头细节", en:"Camera details"}, opts:[
+      ["A8", {zh:"运动方向和提示词不符", en:"Motion direction differs from the prompt"}],
+      ["A9", {zh:"运动幅度很小", en:"Very small motion"}],
+      ["A10", {zh:"中途有剪辑或镜头切换", en:"Cut or shot change"}],
+      ["A6", {zh:"镜头抖动、来回或跳变", en:"Shaky, back-and-forth or jumpy camera"}]]},
+    {title:{zh:"内容细节", en:"Content details"}, opts:[
+      ["B2", {zh:"物体整体移动或转动（刚体）", en:"An object moves or turns as a whole (rigid)"}],
+      ["B3", {zh:"物体非刚性变形", en:"Non-rigid deformation"}],
+      ["B4", {zh:"物体凭空出现或消失", en:"Objects appear or vanish"}],
+      ["B5", {zh:"结构或数量前后不一致", en:"Structure or count changes"}],
+      ["B6", {zh:"背景或布局在变", en:"Background or layout changes"}],
+      ["B7", {zh:"纹理、颜色或光照闪烁", en:"Texture, color or lighting flickers"}],
+      ["B8", {zh:"转过去再转回来对不上", en:"Content differs when the view returns"}]]},
+    {title:{zh:"画面细节", en:"Image details"}, opts:[
+      ["C1", {zh:"模糊", en:"Blurry"}],
+      ["C2", {zh:"明显伪影", en:"Visible artifacts"}],
+      ["C3", {zh:"细节非常丰富", en:"Very rich detail"}],
+      ["C4", {zh:"画面很简单，几乎没有纹理", en:"Very plain, almost no texture"}],
+      ["C5", {zh:"反光、透明、玻璃或水面", en:"Reflections, transparency, glass or water"}],
+      ["C6", {zh:"文字、水印或字幕", en:"Text, watermark or captions"}],
+      ["C7", {zh:"内容与提示词不符", en:"Content does not match the prompt"}]]}
+  ];
+  const STORE_KEY = SITE_ID + "-labels-v3", RATER_KEY = SITE_ID + "-rater", LANG_KEY = SITE_ID + "-lang", GUIDE_KEY = SITE_ID + "-guide-seen";
+  const $ = id => document.getElementById(id);
+
+  let lang = "zh";
+  try { lang = localStorage.getItem(LANG_KEY) || ((navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en"); } catch(e) {}
+  if (!T[lang]) lang = "zh";
+  const t = (key, vars) => {
+    let s = (T[lang] && T[lang][key]) || T.zh[key] || key;
+    const all = Object.assign({sendTo: SEND_TO[lang] || SEND_TO.zh}, vars || {});
+    for (const k in all) s = s.split("{" + k + "}").join(all[k]);
+    return s;
+  };
+
+  const manifest = (RAW.videos || []).map(v => ({id:v.id, file:v.filename, prompt:v.prompt, family:v.motion_prompt_family}));
+  const total = manifest.length;
+  document.title = t("title") + " · " + T.en.title;
+
+  let labels = {};
+  try { const raw = localStorage.getItem(STORE_KEY); if (raw) labels = JSON.parse(raw) || {}; } catch(e) { labels = {}; }
+  let cur = 0, rate = 1, serverOK = false, skipArmed = false, saving = false, activeQ = 0;
+  let statusKey = "stPending", statusState = "pending", footKey = "footPublic", msgState = {key:"", vars:null, kind:""};
+  try { $("rater").value = localStorage.getItem(RATER_KEY) || ""; } catch(e) {}
+  $("rater").addEventListener("change", () => { try { localStorage.setItem(RATER_KEY, $("rater").value.trim()); } catch(e) {} });
+  async function postVote(rec){
+    const r = await fetch("/api/vote", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(rec)});
+    if (!r.ok) throw new Error("http " + r.status);
+    return r.json();
+  }
+
+  // ---- dialogs ----
+  function openDlg(d){ if (typeof d.showModal === "function"){ if (!d.open) d.showModal(); } else d.setAttribute("open", ""); }
+  function closeDlg(d){ if (typeof d.close === "function") d.close(); else d.removeAttribute("open"); }
+  const anyDlgOpen = () => !!document.querySelector("dialog[open]");
+  $("helpBtn").addEventListener("click", () => openDlg($("guideDlg")));
+  $("guideClose").addEventListener("click", () => closeDlg($("guideDlg")));
+  $("guideDlg").addEventListener("close", () => { try { localStorage.setItem(GUIDE_KEY, "1"); } catch(e) {} });
+  $("copyClose").addEventListener("click", () => closeDlg($("copyDlg")));
+
+  // ---- build questions ----
+  const textRefs = [];
+  const qsEl = $("qs");
+  QUESTIONS.forEach((q, qi) => {
+    const fs = document.createElement("fieldset");
+    fs.className = q.compact ? "q compact" : "q"; fs.id = "q-" + q.key;
+    const lg = document.createElement("legend");
+    const qn = document.createElement("span"); qn.className = "qn";
+    const tt = document.createElement("span");
+    textRefs.push(() => { qn.textContent = t("qn", {n: qi + 1}); tt.textContent = q.title[lang]; });
+    lg.append(qn, tt); fs.appendChild(lg);
+    q.opts.forEach(([val, text], oi) => {
+      const lab = document.createElement("label"); lab.className = "opt";
+      const inp = document.createElement("input"); inp.type = "radio"; inp.name = q.key; inp.value = val; inp.id = "opt-" + q.key + "-" + val;
+      const key = document.createElement("span"); key.className = "key"; key.textContent = String(oi + 1);
+      const tx = document.createElement("span");
+      textRefs.push(() => { tx.textContent = text[lang]; });
+      lab.append(inp, key, tx);
+      inp.addEventListener("change", () => {
+        if (q.key === "q1" && val === "broken"){
+          checkVal("q2", "unsure"); checkVal("q3", "no");
+          setActive(QUESTIONS.length - 1); maybeAutoSave(QUESTIONS.length - 1); return;
+        }
+        setActive(Math.min(qi + 1, QUESTIONS.length - 1)); maybeAutoSave(qi);
+      });
+      fs.appendChild(lab);
+    });
+    fs.addEventListener("click", () => setActive(qi));
+    qsEl.appendChild(fs);
+  });
+  const moreEl = $("moreGrid");
+  MORE.forEach(g => {
+    const box = document.createElement("div"); box.className = "mg";
+    const b = document.createElement("b"); box.appendChild(b);
+    textRefs.push(() => { b.textContent = g.title[lang]; });
+    g.opts.forEach(([code, text]) => {
+      const lab = document.createElement("label");
+      const inp = document.createElement("input"); inp.type = "checkbox"; inp.name = "more"; inp.value = code; inp.id = "more-" + code;
+      const tx = document.createElement("span");
+      textRefs.push(() => { tx.textContent = text[lang]; });
+      lab.append(inp, tx); box.appendChild(lab);
+    });
+    moreEl.appendChild(box);
+  });
+
+  function applyLang(){
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+    $("rater").placeholder = t("raterPh");
+    $("note").placeholder = t("notePh");
+    $("langBtn").textContent = t("langBtn");
+    $("rail").setAttribute("aria-label", t("clips"));
+    $("copyBox").setAttribute("aria-label", t("copyAll"));
+    textRefs.forEach(fn => fn());
+    $("status").textContent = t(statusKey); $("status").title = t(statusKey);
+    $("footNote").textContent = t(footKey);
+    if (msgState.key) setMsg(msgState.key, msgState.vars, msgState.kind);
+    renderChips();
+    if (manifest[cur]){ const f = manifest[cur].family; $("family").textContent = t("familyPrefix") + ((T[lang].fam || {})[f] || f || "—"); }
+  }
+  $("langBtn").addEventListener("click", () => { lang = lang === "zh" ? "en" : "zh"; try { localStorage.setItem(LANG_KEY, lang); } catch(e) {} applyLang(); });
+
+  // Scroll an inner panel just enough to show el; the page itself never scrolls on wide screens.
+  function reveal(box, el){
+    if (!box || !el) return;
+    const b = box.getBoundingClientRect(), r = el.getBoundingClientRect();
+    if (box.scrollHeight > box.clientHeight + 1){
+      if (r.top < b.top) box.scrollTop -= (b.top - r.top) + 4;
+      else if (r.bottom > b.bottom) box.scrollTop += (r.bottom - b.bottom) + 4;
+    }
+    if (box.scrollWidth > box.clientWidth + 1){
+      if (r.left < b.left) box.scrollLeft -= (b.left - r.left) + 4;
+      else if (r.right > b.right) box.scrollLeft += (r.right - b.right) + 4;
+    }
+  }
+  function setActive(i){
+    activeQ = i;
+    QUESTIONS.forEach((q, qi) => $("q-" + q.key).classList.toggle("active", qi === i));
+    const body = $("sheetBody");
+    if (getComputedStyle(body).overflowY === "auto") reveal(body, $("q-" + QUESTIONS[i].key));
+  }
+  function checkVal(key, val){
+    const el = document.querySelector('input[name="' + key + '"][value="' + val + '"]');
+    if (el) el.checked = true;
+  }
+  function readForm(){
+    const out = {};
+    QUESTIONS.forEach(q => { const c = document.querySelector('input[name="' + q.key + '"]:checked'); out[q.key] = c ? c.value : null; });
+    out.more = [...document.querySelectorAll('input[name="more"]:checked')].map(i => i.value);
+    out.note = $("note").value.trim();
+    return out;
+  }
+  function fillForm(rec){
+    QUESTIONS.forEach(q => {
+      document.querySelectorAll('input[name="' + q.key + '"]').forEach(i => { i.checked = !!rec && rec[q.key] === i.value; });
+      $("q-" + q.key).classList.remove("missing");
+    });
+    const more = rec && rec.more ? rec.more : [];
+    document.querySelectorAll('input[name="more"]').forEach(i => { i.checked = more.includes(i.value); });
+    $("note").value = rec && rec.note ? rec.note : "";
+    if (more.length || (rec && rec.note)) $("more").open = true;
+    $("sheetBody").scrollTop = 0;
+    const firstEmpty = QUESTIONS.findIndex(q => !(rec && rec[q.key]));
+    setActive(firstEmpty === -1 ? 0 : firstEmpty);
+  }
+  function sameAsSaved(){
+    const f = readForm(), s = labels[manifest[cur].id];
+    if (!s) return QUESTIONS.every(q => !f[q.key]) && f.more.length === 0 && !f.note;
+    return QUESTIONS.every(q => f[q.key] === (s[q.key] || null)) && JSON.stringify([...f.more].sort()) === JSON.stringify([...(s.more || [])].sort()) && f.note === (s.note || "");
+  }
+  function maybeAutoSave(qi){
+    if (qi !== QUESTIONS.length - 1) return;
+    const f = readForm();
+    if (QUESTIONS.every(q => f[q.key]) && !$("more").open) $("sheet").requestSubmit();
+  }
+
+  // ---- chips ----
+  const chipsEl = $("chips");
+  manifest.forEach((v, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = v.id.replace(/^v/, ""); b.title = v.id;
+    b.addEventListener("click", () => go(i));
+    chipsEl.appendChild(b);
+  });
+  function renderChips(){
+    const only = $("onlyTodo").checked;
+    let done = 0;
+    [...chipsEl.children].forEach((b, i) => {
+      const isDone = !!labels[manifest[i].id];
+      if (isDone) done++;
+      b.classList.toggle("done", isDone);
+      b.classList.toggle("current", i === cur);
+      b.hidden = only && isDone && i !== cur;
+    });
+    $("meterText").textContent = t("meter", {done: done, total: total});
+    $("barFill").style.width = (total ? (100 * done / total) : 0) + "%";
+    return done;
+  }
+
+  // ---- navigation ----
+  const player = $("player");
+  // A clip counts as watched once playback reaches its end or loops back to the start.
+  const watched = new Set();
+  let lastT = 0, pendingSave = false;
+  function markWatched(){
+    const v = manifest[cur];
+    if (!v || watched.has(v.id)) return;
+    watched.add(v.id);
+    if (pendingSave){ pendingSave = false; $("sheet").requestSubmit(); }
+  }
+  player.addEventListener("timeupdate", () => {
+    const d = player.duration, c = player.currentTime;
+    if (isFinite(d) && d > 0 && (c >= d - 0.3 || c + 0.5 < lastT)) markWatched();
+    lastT = c;
+  });
+  player.addEventListener("ended", markWatched);
+  player.addEventListener("error", markWatched);
+  function go(i){
+    if (i < 0 || i >= total) return;
+    cur = i; skipArmed = false; setMsg(""); lastT = 0; pendingSave = false;
+    const v = manifest[i];
+    $("vidLabel").textContent = v.id;
+    $("pos").textContent = (i + 1) + " / " + total;
+    $("family").textContent = t("familyPrefix") + ((T[lang].fam || {})[v.family] || v.family || "—");
+    $("prompt").textContent = v.prompt || "";
+    $("prompt").scrollTop = 0;
+    player.src = v.file; player.playbackRate = rate;
+    const p = player.play(); if (p && p.catch) p.catch(() => {});
+    $("more").open = false;
+    fillForm(labels[v.id]);
+    renderChips();
+    reveal(chipsEl, chipsEl.children[i]);
+  }
+  function nextIndex(from){
+    const only = $("onlyTodo").checked;
+    for (let k = 1; k <= total; k++){ const j = (from + k) % total; if (!only || !labels[manifest[j].id]) return j; }
+    return -1;
+  }
+  player.addEventListener("loadedmetadata", () => { player.playbackRate = rate; });
+  $("tools").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.id === "replay"){ lastT = 0; player.currentTime = 0; const p = player.play(); if (p && p.catch) p.catch(() => {}); return; }
+    rate = Number(b.dataset.rate) || 1; player.playbackRate = rate;
+    $("tools").querySelectorAll("button[data-rate]").forEach(x => x.classList.toggle("on", x === b));
+  });
+
+  function setMsg(key, vars, kind){
+    msgState = {key: key || "", vars: vars || null, kind: kind || ""};
+    const m = $("msg"); m.textContent = key ? t(key, vars) : ""; m.className = "msg" + (kind ? " " + kind : "");
+  }
+  function setStatus(state, key){ statusState = state; statusKey = key; const s = $("status"); s.dataset.state = state; s.textContent = t(key); s.title = t(key); }
+  function persistLocal(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(labels)); } catch(e) {} }
+
+  // ---- save ----
+  $("sheet").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (saving) return;
+    const f = readForm();
+    let ok = true;
+    QUESTIONS.forEach(q => { const miss = !f[q.key]; $("q-" + q.key).classList.toggle("missing", miss); if (miss) ok = false; });
+    if (!ok){ setMsg("needAll", null, "err"); return; }
+    const rater = $("rater").value.trim();
+    if (!serverOK && !rater){ setMsg("needRater", null, "err"); $("rater").focus(); return; }
+    const v = manifest[cur];
+    if (REQUIRE_FULL_VIEW && f.q1 !== "broken" && !watched.has(v.id) && !labels[v.id]){ pendingSave = true; setMsg("waitView", null, ""); return; }
+    const body = {vid: v.id, q1: f.q1, q2: f.q2, q3: f.q3, more: f.more, note: f.note, rater: rater, lang: lang, updatedAt: new Date().toISOString(), schema: SCHEMA, site: SITE_ID};
+    labels[v.id] = body; persistLocal(); renderChips();
+    if (serverOK){
+      saving = true; $("save").disabled = true;
+      try { await postVote(body); }
+      catch(err){ setMsg("saveFail", null, "err"); setStatus("error", "stError"); saving = false; $("save").disabled = false; return; }
+      saving = false; $("save").disabled = false;
+    }
+    const n = nextIndex(cur);
+    if (n === -1){ setMsg("allDone", {total: total}, "ok"); return; }
+    go(n);
+    setMsg("saved", {id: v.id}, "ok");
+  });
+
+  $("prev").addEventListener("click", () => go((cur - 1 + total) % total));
+  $("skip").addEventListener("click", () => {
+    if (!sameAsSaved() && !skipArmed){ skipArmed = true; setMsg("unsaved", null, "err"); return; }
+    const n = nextIndex(cur); go(n === -1 ? (cur + 1) % total : n);
+  });
+  $("onlyTodo").addEventListener("change", renderChips);
+  document.addEventListener("keydown", e => {
+    if (anyDlgOpen()) return;
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){ e.preventDefault(); $("sheet").requestSubmit(); return; }
+    const el = e.target;
+    if (el && (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && el.type === "text"))) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^[1-9]$/.test(e.key)){
+      e.preventDefault();
+      const q = QUESTIONS[activeQ];
+      const inp = document.querySelectorAll('input[name="' + q.key + '"]')[Number(e.key) - 1];
+      if (inp){ inp.checked = true; inp.dispatchEvent(new Event("change")); }
+      return;
+    }
+    if (e.key === "ArrowRight"){ e.preventDefault(); $("skip").click(); }
+    if (e.key === "ArrowLeft"){ e.preventDefault(); $("prev").click(); }
+  });
+
+  $("copyAll").addEventListener("click", async () => {
+    const text = JSON.stringify({schema:SCHEMA, site:SITE_ID, rater:$("rater").value.trim(), exportedAt:new Date().toISOString(), count:Object.keys(labels).length, labels}, null, 1);
+    const box = $("copyBox"); box.value = text;
+    try { await navigator.clipboard.writeText(text); setMsg("copied", null, "ok"); }
+    catch(e){ openDlg($("copyDlg")); box.focus(); box.select(); }
+  });
+
+  applyLang();
+  const firstTodo = manifest.findIndex(v => !labels[v.id]);
+  go(firstTodo === -1 ? 0 : firstTodo);
+  let guideSeen = false;
+  try { guideSeen = localStorage.getItem(GUIDE_KEY) === "1"; } catch(e) {}
+  if (!guideSeen && Object.keys(labels).length === 0) openDlg($("guideDlg"));
+
+  // ---- local save service (serve.py on the author's computer); the public site has none ----
+  (async () => {
+    try {
+      const r = await fetch("/api/votes", {cache: "no-store"});
+      if (!r.ok) throw new Error("http " + r.status);
+      const remote = (await r.json()).labels || {};
+      for (const [id, rem] of Object.entries(remote)){
+        if (!rem || rem.schema !== SCHEMA) continue;
+        const loc = labels[id];
+        if (!loc || (rem.updatedAt || "") >= (loc.updatedAt || "")) labels[id] = rem;
+      }
+      for (const [id, loc] of Object.entries(labels)){
+        const rem = remote[id];
+        if (!rem || rem.schema !== SCHEMA || (loc.updatedAt || "") > (rem.updatedAt || "")){ try { await postVote(loc); } catch(e) {} }
+      }
+      serverOK = true;
+      persistLocal(); renderChips();
+      if (!document.activeElement || !document.activeElement.closest || !document.activeElement.closest("#sheet")) fillForm(labels[manifest[cur].id]);
+      setStatus("ok", "stOk"); footKey = "footLocal"; $("footNote").textContent = t(footKey);
+    } catch(e){
+      serverOK = false;
+      setStatus("local", "stLocal"); footKey = "footPublic"; $("footNote").textContent = t(footKey);
+    }
+  })();
+})();
+</script>
+</body>
+</html>
